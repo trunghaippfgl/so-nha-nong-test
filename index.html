@@ -361,9 +361,12 @@
     </div>
 
     <div id="debtCustomerSection">
+      <button class="btn btn-ghost" style="margin-bottom:10px;" onclick="openAddCustomer()">+ Thêm khách hàng mới</button>
+      <div class="search-box" style="margin-bottom:10px;">
+        <input id="debtSearch" placeholder="Tìm theo tên, số điện thoại..." oninput="renderDebtList()">
+      </div>
       <div class="section-title">Danh sách khách nợ</div>
       <div class="card" id="debtList"></div>
-      <button class="btn btn-ghost" style="margin-top:10px;" onclick="openAddCustomer()">+ Thêm khách hàng mới</button>
     </div>
 
     <div id="debtSupplierSection" style="display:none;">
@@ -1986,9 +1989,25 @@ function addToCartUnit(productId, encodedUnit){
   const available = availableBaseStock(p);
   const alreadyBase = cart.filter(c=>c.productId===productId).reduce((sum,c)=>sum+c.qty*(Number(c.factor)||1),0);
   if (alreadyBase + u.factor > available){ alert('Không đủ tồn kho có thể bán. Hàng hết hạn không được tính vào tồn bán.'); return; }
+
+  const unitCost = (Number(p.avgCost ?? p.cost) || 0) * (Number(u.factor)||1);
+  const unitPrice = Number(u.price)||0;
+  if (unitCost > 0 && unitPrice < unitCost){
+    const lossPerUnit = unitCost - unitPrice;
+    const ok = confirm(
+      '⚠️ CẢNH BÁO LỖ VỐN!\n\n' +
+      p.name + ' (' + u.name + ')\n' +
+      'Giá vốn: ' + money(unitCost) + '\n' +
+      'Giá bán: ' + money(unitPrice) + '\n' +
+      'Lỗ mỗi ' + u.name + ': ' + money(lossPerUnit) + '\n\n' +
+      'Vẫn muốn bán với giá này?'
+    );
+    if (!ok) return;
+  }
+
   const existing = cart.find(c => c.productId === productId && c.unit === u.name);
   if (existing) existing.qty++;
-  else cart.push({ productId, name:p.name, price:Number(u.price)||0, unit:u.name, factor:Number(u.factor)||1, qty:1, cost:(Number(p.cost)||0)*(Number(u.factor)||1) });
+  else cart.push({ productId, name:p.name, price:unitPrice, unit:u.name, factor:Number(u.factor)||1, qty:1, cost:(Number(p.cost)||0)*(Number(u.factor)||1) });
   renderCart();
 }
 function changeCartQtyAt(index, delta){
@@ -2212,7 +2231,15 @@ function renderDebtList(){
     box.innerHTML = '<div class="empty-state"><div class="ic">📒</div>Chưa có khách hàng nào.</div>';
     return;
   }
-  box.innerHTML = customers.map(c => `
+  const keyword = (document.getElementById('debtSearch').value || '').trim().toLowerCase();
+  const filtered = customers.filter(c =>
+    !keyword || c.name.toLowerCase().includes(keyword) || (c.phone||'').toLowerCase().includes(keyword)
+  );
+  if (!filtered.length){
+    box.innerHTML = '<div class="empty-state"><div class="ic">🔍</div>Không tìm thấy khách hàng phù hợp.</div>';
+    return;
+  }
+  box.innerHTML = filtered.map(c => `
     <div class="prod-item" style="align-items:flex-start;">
       <div class="prod-ic">👤</div>
       <div style="flex:1;">
