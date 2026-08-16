@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Sổ Nhà Nông</title>
+<title>Sổ Nhà Nông V2.1.1</title>
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="manifest" href="manifest.json">
@@ -282,7 +282,7 @@
 <div id="app">
   <div class="topbar">
     <div>
-      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V2.1</span></div>
+      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V2.1.1</span></div>
       <div class="sub" id="storeGreeting">Xin chào</div>
     </div>
     <div style="text-align:right;">
@@ -342,8 +342,9 @@
     <div class="search-box">
       <input id="stockSearch" placeholder="Tìm theo tên, mã..." oninput="renderStockList()">
     </div>
-    <div style="margin-bottom:10px;">
-      <button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('excelImportInput').click()">📥 Nhập sản phẩm từ Excel</button>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="document.getElementById('excelImportInput').click()">📥 Nhập Excel</button>
+      <button class="btn btn-ghost" style="flex:1;" onclick="openStocktake()">🧮 Kiểm kê kho</button>
       <input type="file" id="excelImportInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelImport(event)">
     </div>
     <div class="card" id="stockList"></div>
@@ -361,12 +362,9 @@
     </div>
 
     <div id="debtCustomerSection">
-      <button class="btn btn-ghost" style="margin-bottom:10px;" onclick="openAddCustomer()">+ Thêm khách hàng mới</button>
-      <div class="search-box" style="margin-bottom:10px;">
-        <input id="debtSearch" placeholder="Tìm theo tên, số điện thoại..." oninput="renderDebtList()">
-      </div>
       <div class="section-title">Danh sách khách nợ</div>
       <div class="card" id="debtList"></div>
+      <button class="btn btn-ghost" style="margin-top:10px;" onclick="openAddCustomer()">+ Thêm khách hàng mới</button>
     </div>
 
     <div id="debtSupplierSection" style="display:none;">
@@ -485,8 +483,9 @@
     </div>
     <div class="row">
       <div>
-        <label>Giá nhập</label>
+        <label id="prodCostLabel">Giá vốn / Giá nhập ban đầu</label>
         <input id="prodCost" type="number" inputmode="numeric" placeholder="0">
+        <div class="prod-meta" id="prodCostHelp" style="margin-top:4px;">Sản phẩm mới: nhập giá vốn ban đầu.</div>
       </div>
       <div>
         <label>Giá bán *</label>
@@ -814,9 +813,10 @@
 
     <div class="ledger-rule" style="margin:20px 0;"></div>
 
-    <h3>Dữ liệu V2.1</h3>
+    <h3>Dữ liệu V2.1.1</h3>
     <div class="card-tight card" id="migrationSettingsStatus" style="font-size:13px; line-height:1.6;">Đang kiểm tra trạng thái...</div>
     <button class="btn btn-ghost" id="migrationCompareBtn" onclick="showMigrationComparisonV21()" style="margin-top:8px;">🧾 Xem đối chiếu nâng cấp</button>
+    <button class="btn btn-ghost" onclick="openDataHealthCheck()" style="margin-top:8px;">🩺 Kiểm tra sức khỏe dữ liệu</button>
 
     <div class="ledger-rule" style="margin:20px 0;"></div>
 
@@ -830,6 +830,55 @@
     <div style="margin-top:16px;">
       <button class="btn btn-primary" onclick="changePassword()">Cập nhật mật khẩu</button>
     </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: KIỂM TRA SỨC KHỎE DỮ LIỆU ============ -->
+<div class="overlay" id="dataHealthModal">
+  <div class="sheet" style="max-height:92vh; overflow-y:auto;">
+    <button class="sheet-close" onclick="closeModal('dataHealthModal')">✕</button>
+    <h3>🩺 Kiểm tra sức khỏe dữ liệu</h3>
+    <div class="prod-meta" style="line-height:1.6; margin-bottom:12px;">Đối chiếu trực tiếp dữ liệu Firestore: tồn sản phẩm ↔ tồn các lô, công nợ ↔ sổ công nợ và phát hiện số âm/bất thường.</div>
+    <div id="dataHealthContent"><div class="empty-state">Bấm “Chạy kiểm tra” để bắt đầu.</div></div>
+    <button class="btn btn-primary" id="dataHealthRunBtn" onclick="runDataHealthCheck()" style="margin-top:10px;">🩺 Chạy kiểm tra</button>
+  </div>
+</div>
+
+<!-- ============ MODAL: KIỂM KÊ KHO ============ -->
+<div class="overlay" id="stocktakeModal">
+  <div class="sheet" style="max-height:94vh; overflow-y:auto;">
+    <button class="sheet-close" onclick="closeModal('stocktakeModal')">✕</button>
+    <h3>🧮 Kiểm kê kho thực tế</h3>
+    <div class="card-tight card" style="font-size:12px; line-height:1.6;">
+      Nhập số lượng <b>thực tế đang đếm</b> theo đơn vị gốc. Hệ thống chỉ điều chỉnh những dòng đã nhập. Chênh lệch được lưu thành <b>Phiếu kiểm kê</b>, không sửa tồn thủ công.
+    </div>
+    <div class="search-box"><input id="stocktakeSearch" placeholder="Tìm sản phẩm..." oninput="renderStocktakeList()"></div>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="fillStocktakeWithSystem()">= Điền theo hệ thống</button>
+      <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="clearStocktakeDraft()">🧹 Xóa số đã nhập</button>
+    </div>
+    <div class="stat-row" style="margin-bottom:10px;">
+      <div class="stat wheat"><div class="label">Đã kiểm</div><div class="value" id="stocktakeCounted">0</div></div>
+      <div class="stat rust"><div class="label">Có lệch</div><div class="value" id="stocktakeMismatch">0</div></div>
+      <div class="stat leaf"><div class="label">Chênh tổng</div><div class="value" id="stocktakeNetDiff">0</div></div>
+    </div>
+    <div class="card" id="stocktakeList"></div>
+    <label>Ghi chú phiếu kiểm kê</label>
+    <textarea id="stocktakeNote" rows="3" placeholder="VD: Kiểm kê cuối ngày / kiểm kê tháng 8..."></textarea>
+    <div id="stocktakePreview" class="card-tight card" style="margin-top:10px; font-size:12px; line-height:1.6;"></div>
+    <button class="btn btn-primary" id="stocktakeConfirmBtn" onclick="confirmStocktake()" style="margin-top:10px;">✅ Xác nhận & điều chỉnh tồn</button>
+    <div class="ledger-rule" style="margin:18px 0;"></div>
+    <div class="section-title" style="margin-top:0;">Phiếu kiểm kê gần đây</div>
+    <div id="stocktakeHistory"><div class="empty-state" style="padding:16px;">Chưa tải lịch sử.</div></div>
+  </div>
+</div>
+
+<!-- ============ MODAL: CHI TIẾT PHIẾU KIỂM KÊ ============ -->
+<div class="overlay" id="stocktakeDetailModal">
+  <div class="sheet" style="max-height:90vh; overflow-y:auto;">
+    <button class="sheet-close" onclick="closeModal('stocktakeDetailModal')">✕</button>
+    <h3>🧾 Chi tiết phiếu kiểm kê</h3>
+    <div id="stocktakeDetailContent"></div>
   </div>
 </div>
 
@@ -887,6 +936,9 @@ let reportSales = [];
 let reportDebtPayments = [];
 let migrationPreviewV21 = null;
 let migrationStoreDataV21 = null;
+let stocktakeDraft = {};
+let stocktakeBaseline = {};
+let stocktakeHistory = [];
 let storeListenersStarted = false;
 let authInitToken = 0;
 function numberToVietnameseWords(number){
@@ -1000,7 +1052,7 @@ function doRegister(){
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       trialStartAt: firebase.firestore.FieldValue.serverTimestamp(),
       paid: false,
-      schemaVersion: '2.1',
+      schemaVersion: '2.1.1',
       migrationV21Complete: true,
       migrationV21: { status:'native_v21', completedAt:firebase.firestore.FieldValue.serverTimestamp() }
     });
@@ -1129,7 +1181,7 @@ auth.onAuthStateChanged(async user => {
         document.getElementById('trialExpiredScreen').style.display='flex';
         return;
       }
-      if(data.migrationV21Complete===true || String(data.schemaVersion||'')==='2.1'){
+      if(data.migrationV21Complete===true || ['2.1','2.1.1'].includes(String(data.schemaVersion||''))){
         document.getElementById('app').style.display='block';
         startStoreListenersV21();
         updateMigrationSettingsStatusV21();
@@ -1336,8 +1388,8 @@ async function startMigrationV21(){
       return;
     }
     const completed={status:'complete',before:plan.before,after:verify.after,openingLots:plan.openingLots.length,integrity:{lotMismatch:verify.lotMismatch.length,customerLedgerMismatch:verify.customerLedgerMismatch.length,supplierLedgerMismatch:verify.supplierLedgerMismatch.length},completedAt:firebase.firestore.FieldValue.serverTimestamp()};
-    await storeRef.set({schemaVersion:'2.1',migrationV21Complete:true,migrationV21:completed},{merge:true});
-    migrationStoreDataV21={...(migrationStoreDataV21||{}),schemaVersion:'2.1',migrationV21Complete:true,migrationV21:completed};
+    await storeRef.set({schemaVersion:'2.1.1',migrationV21Complete:true,migrationV21:completed},{merge:true});
+    migrationStoreDataV21={...(migrationStoreDataV21||{}),schemaVersion:'2.1.1',migrationV21Complete:true,migrationV21:completed};
     document.getElementById('migrationStatusBox').innerHTML='<div style="color:var(--leaf-500);font-weight:700;">✅ Nâng cấp V2.1 thành công</div><div class="prod-meta" style="margin-top:6px;">5 chỉ tiêu trước/sau đều khớp; tổng tồn đã khớp với lô và số dư đã khớp với sổ công nợ.</div>';
     document.getElementById('migrationPreviewBox').innerHTML=`<div class="section-title">Đối chiếu trước / sau</div><div class="card" style="padding:10px;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="color:var(--cream-500);"><th style="text-align:left;padding:6px 4px;">Chỉ tiêu</th><th style="text-align:right;padding:6px 4px;">Trước</th><th style="text-align:right;padding:6px 4px;">Sau</th><th style="padding:6px 4px;">Khớp</th></tr></thead><tbody>${migrationSnapshotRowsV21(plan.before,verify.after)}</tbody></table></div>`;
     btn.textContent='✅ Đã nâng cấp';
@@ -1361,7 +1413,7 @@ function updateMigrationSettingsStatusV21(){
   const box=document.getElementById('migrationSettingsStatus');
   if(!box) return;
   const d=migrationStoreDataV21||{};
-  if(d.migrationV21Complete===true || String(d.schemaVersion||'')==='2.1'){
+  if(d.migrationV21Complete===true || ['2.1','2.1.1'].includes(String(d.schemaVersion||''))){
     box.innerHTML='✅ <b>Dữ liệu V2.1 đã sẵn sàng.</b><br><span class="prod-meta">Tồn đầu kỳ và dư nợ đầu kỳ đã được chuẩn hóa mà không thay đổi số dư hiện tại.</span>';
   }else box.innerHTML='⚠️ Cửa hàng chưa hoàn tất nâng cấp dữ liệu V2.1.';
 }
@@ -1721,6 +1773,11 @@ function openAddProduct(){
   document.getElementById('prodCategory').value = 'Thuốc BVTV';
   document.getElementById('prodUnit').value = 'Chai';
   document.getElementById('prodStock').disabled = false;
+  document.getElementById('prodCost').disabled = false;
+  document.getElementById('prodUnit').disabled = false;
+  document.getElementById('prodCostLabel').textContent = 'Giá vốn / Giá nhập ban đầu';
+  document.getElementById('prodCostHelp').textContent = 'Sản phẩm mới: nhập giá vốn ban đầu.';
+  document.getElementById('prodCost').title = 'Giá vốn ban đầu cho sản phẩm mới';
   openModal('productModal');
 }
 
@@ -1734,7 +1791,12 @@ function openEditProduct(id){
   document.getElementById('prodCategory').value = p.category || 'Thuốc BVTV';
   document.getElementById('prodUnit').value = p.unit || 'Chai';
   document.getElementById('prodSku').value = p.sku || '';
-  document.getElementById('prodCost').value = p.cost || '';
+  document.getElementById('prodCost').value = p.avgCost ?? p.cost ?? '';
+  document.getElementById('prodCost').disabled = true;
+  document.getElementById('prodCostLabel').textContent = 'Giá vốn bình quân (tự động)';
+  document.getElementById('prodCostHelp').textContent = 'Giá vốn chỉ thay đổi qua Phiếu nhập hàng; không sửa trực tiếp.';
+  document.getElementById('prodCost').title = 'Giá vốn được tính tự động từ phiếu nhập hàng; không sửa trực tiếp.';
+  document.getElementById('prodUnit').disabled = Number(p.stock||0)>0 || lotsForProduct(p.id).length>0;
   document.getElementById('prodPrice').value = p.price || '';
   document.getElementById('prodStock').value = p.stock || 0;
   document.getElementById('prodStock').disabled = true;
@@ -1766,12 +1828,13 @@ function saveProduct(){
   btn.disabled = true;
   btn.textContent = 'Đang lưu...';
 
+  const preservedCost = currentEditingProduct ? Number(currentEditingProduct.avgCost ?? currentEditingProduct.cost ?? 0) : (parseFloat(document.getElementById('prodCost').value) || 0);
   const data = {
     name,
     category: document.getElementById('prodCategory').value,
     unit: document.getElementById('prodUnit').value,
     sku: document.getElementById('prodSku').value.trim(),
-    cost: parseFloat(document.getElementById('prodCost').value) || 0,
+    cost: preservedCost,
     price,
     stock,
     lowThreshold: parseFloat(document.getElementById('prodLowThreshold').value) || 5,
@@ -1790,7 +1853,7 @@ function saveProduct(){
 
   const ref = editingProductId ? storeRef.collection('products').doc(editingProductId) : storeRef.collection('products').doc();
   if (!editingProductId) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-  data.avgCost = Number(data.cost||0);
+  data.avgCost = preservedCost;
   const batch=db.batch();
   batch.set(ref,data,{merge:true});
   if(!editingProductId && stock>0){
@@ -1989,25 +2052,9 @@ function addToCartUnit(productId, encodedUnit){
   const available = availableBaseStock(p);
   const alreadyBase = cart.filter(c=>c.productId===productId).reduce((sum,c)=>sum+c.qty*(Number(c.factor)||1),0);
   if (alreadyBase + u.factor > available){ alert('Không đủ tồn kho có thể bán. Hàng hết hạn không được tính vào tồn bán.'); return; }
-
-  const unitCost = (Number(p.avgCost ?? p.cost) || 0) * (Number(u.factor)||1);
-  const unitPrice = Number(u.price)||0;
-  if (unitCost > 0 && unitPrice < unitCost){
-    const lossPerUnit = unitCost - unitPrice;
-    const ok = confirm(
-      '⚠️ CẢNH BÁO LỖ VỐN!\n\n' +
-      p.name + ' (' + u.name + ')\n' +
-      'Giá vốn: ' + money(unitCost) + '\n' +
-      'Giá bán: ' + money(unitPrice) + '\n' +
-      'Lỗ mỗi ' + u.name + ': ' + money(lossPerUnit) + '\n\n' +
-      'Vẫn muốn bán với giá này?'
-    );
-    if (!ok) return;
-  }
-
   const existing = cart.find(c => c.productId === productId && c.unit === u.name);
   if (existing) existing.qty++;
-  else cart.push({ productId, name:p.name, price:unitPrice, unit:u.name, factor:Number(u.factor)||1, qty:1, cost:(Number(p.cost)||0)*(Number(u.factor)||1) });
+  else cart.push({ productId, name:p.name, price:Number(u.price)||0, unit:u.name, factor:Number(u.factor)||1, qty:1, cost:(Number(p.cost)||0)*(Number(u.factor)||1) });
   renderCart();
 }
 function changeCartQtyAt(index, delta){
@@ -2231,15 +2278,7 @@ function renderDebtList(){
     box.innerHTML = '<div class="empty-state"><div class="ic">📒</div>Chưa có khách hàng nào.</div>';
     return;
   }
-  const keyword = (document.getElementById('debtSearch').value || '').trim().toLowerCase();
-  const filtered = customers.filter(c =>
-    !keyword || c.name.toLowerCase().includes(keyword) || (c.phone||'').toLowerCase().includes(keyword)
-  );
-  if (!filtered.length){
-    box.innerHTML = '<div class="empty-state"><div class="ic">🔍</div>Không tìm thấy khách hàng phù hợp.</div>';
-    return;
-  }
-  box.innerHTML = filtered.map(c => `
+  box.innerHTML = customers.map(c => `
     <div class="prod-item" style="align-items:flex-start;">
       <div class="prod-ic">👤</div>
       <div style="flex:1;">
@@ -2597,6 +2636,156 @@ function confirmPaySupplierDebt(){
   batch.update(storeRef.collection('suppliers').doc(id),update);
   batch.set(storeRef.collection('supplierDebtLedger').doc(),{supplierId:id,supplierName:supplier?supplier.name:'',type:'payment',debit:0,credit:amount,description:'Trả nợ nhà cung cấp',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
   batch.commit().then(() => closeModal('paySupplierDebtModal')).catch(e => alert('Lỗi: ' + e.message));
+}
+
+// ---------- KIỂM TRA SỨC KHỎE DỮ LIỆU ----------
+function openDataHealthCheck(){
+  document.getElementById('dataHealthContent').innerHTML='<div class="empty-state" style="padding:18px;">Bấm “Chạy kiểm tra” để đối chiếu dữ liệu trực tiếp.</div>';
+  openModal('dataHealthModal');
+}
+function healthNum(n){ return Number(n||0); }
+function healthClose(a,b,tol=0.001){ return Math.abs(healthNum(a)-healthNum(b)) <= tol; }
+async function runDataHealthCheck(){
+  const btn=document.getElementById('dataHealthRunBtn');
+  const box=document.getElementById('dataHealthContent');
+  if(btn.disabled) return;
+  btn.disabled=true; btn.textContent='Đang kiểm tra...';
+  box.innerHTML='<div class="empty-state" style="padding:22px;">🔎 Đang đọc dữ liệu Firestore...</div>';
+  try{
+    const [pSnap,lSnap,cSnap,clSnap,sSnap,slSnap]=await Promise.all([
+      storeRef.collection('products').get(), storeRef.collection('inventoryLots').get(),
+      storeRef.collection('customers').get(), storeRef.collection('debtLedger').get(),
+      storeRef.collection('suppliers').get(), storeRef.collection('supplierDebtLedger').get()
+    ]);
+    const ps=pSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const ls=lSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const cs=cSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const cls=clSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const ss=sSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const sls=slSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const lotBy={}; ls.forEach(l=>lotBy[l.productId]=(lotBy[l.productId]||0)+healthNum(l.qtyRemaining));
+    const custLedger={}; cls.forEach(x=>custLedger[x.customerId]=(custLedger[x.customerId]||0)+healthNum(x.debit)-healthNum(x.credit));
+    const suppLedger={}; sls.forEach(x=>suppLedger[x.supplierId]=(suppLedger[x.supplierId]||0)+healthNum(x.debit)-healthNum(x.credit));
+    const productIssues=[];
+    ps.forEach(p=>{
+      const stock=healthNum(p.stock), lots=healthNum(lotBy[p.id]);
+      if(stock<0) productIssues.push({name:p.name,msg:'Tồn sản phẩm âm: '+stock});
+      if(!healthClose(stock,lots)) productIssues.push({name:p.name,msg:'Tồn hệ thống '+stock.toLocaleString('vi-VN')+' '+(p.unit||'')+' ≠ tổng lô '+lots.toLocaleString('vi-VN')});
+    });
+    ls.filter(l=>healthNum(l.qtyRemaining)<-0.001).forEach(l=>productIssues.push({name:l.productName||l.productId,msg:'Lô '+(l.lotNumber||l.id)+' đang âm '+healthNum(l.qtyRemaining)}));
+    const customerIssues=[];
+    cs.forEach(c=>{const debt=healthNum(c.debt), ledger=healthNum(custLedger[c.id]); if(debt<0) customerIssues.push({name:c.name,msg:'Công nợ âm '+money(debt)}); if(!healthClose(debt,ledger,1)) customerIssues.push({name:c.name,msg:'Số dư '+money(debt)+' ≠ Sổ nợ '+money(ledger)});});
+    const supplierIssues=[];
+    ss.forEach(x=>{const debt=healthNum(x.debt), ledger=healthNum(suppLedger[x.id]); if(debt<0) supplierIssues.push({name:x.name,msg:'Công nợ âm '+money(debt)}); if(!healthClose(debt,ledger,1)) supplierIssues.push({name:x.name,msg:'Số dư '+money(debt)+' ≠ Sổ nợ '+money(ledger)});});
+    const totalIssues=productIssues.length+customerIssues.length+supplierIssues.length;
+    const ok=totalIssues===0;
+    const issueHtml=(title,arr)=>`<div class="section-title">${title}</div>`+(arr.length?`<div class="card">${arr.slice(0,50).map(i=>`<div class="prod-item"><div style="flex:1;"><div class="prod-name">${escapeHtmlV211(i.name||'Không rõ')}</div><div class="prod-meta" style="color:var(--rust-500);">${escapeHtmlV211(i.msg)}</div></div></div>`).join('')}${arr.length>50?`<div class="prod-meta">... và ${arr.length-50} lỗi khác.</div>`:''}</div>`:'<div class="card-tight card" style="color:var(--leaf-500);">✅ Không phát hiện lệch.</div>');
+    box.innerHTML=`<div class="card" style="text-align:center;"><div style="font-size:38px;">${ok?'✅':'⚠️'}</div><div style="font-size:18px;font-weight:700;color:${ok?'var(--leaf-500)':'var(--wheat-400)'};margin-top:4px;">${ok?'Dữ liệu đang khớp 100%':'Phát hiện '+totalIssues+' vấn đề'}</div><div class="prod-meta" style="margin-top:6px;">${ps.length} sản phẩm · ${cs.length} khách hàng · ${ss.length} NCC · ${ls.length} lô</div></div>`+
+      issueHtml('Kho & lô ('+productIssues.length+')',productIssues)+issueHtml('Công nợ khách ('+customerIssues.length+')',customerIssues)+issueHtml('Công nợ NCC ('+supplierIssues.length+')',supplierIssues)+
+      `<div class="card-tight card" style="font-size:12px;line-height:1.6;">${ok?'Bạn có thể tiếp tục bán hàng/kiểm kê.':'Không nên kiểm kê hoặc chỉnh số liệu trước khi xử lý các dòng lệch ở trên.'}<br>Thời điểm kiểm tra: ${new Date().toLocaleString('vi-VN')}</div>`;
+  }catch(e){ box.innerHTML='<div class="card-tight card" style="color:var(--rust-500);">Lỗi kiểm tra: '+escapeHtmlV211(e.message||String(e))+'</div>'; }
+  finally{btn.disabled=false;btn.textContent='🩺 Chạy kiểm tra';}
+}
+function escapeHtmlV211(v){return String(v??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));}
+
+// ---------- KIỂM KÊ KHO ----------
+function openStocktake(){
+  stocktakeDraft={};
+  stocktakeBaseline={};
+  products.forEach(p=>stocktakeBaseline[p.id]=Number(p.stock||0));
+  document.getElementById('stocktakeSearch').value='';
+  document.getElementById('stocktakeNote').value='';
+  renderStocktakeList();
+  loadStocktakeHistory();
+  openModal('stocktakeModal');
+}
+function stocktakeSystemQty(productId){
+  if(Object.prototype.hasOwnProperty.call(stocktakeBaseline,productId)) return Number(stocktakeBaseline[productId]||0);
+  const p=products.find(x=>x.id===productId); return p?Number(p.stock||0):0;
+}
+function updateStocktakeDraft(productId,value){
+  if(value===''){ delete stocktakeDraft[productId]; }
+  else { const n=Number(value); if(Number.isFinite(n) && n>=0) stocktakeDraft[productId]=n; }
+  updateStocktakeStats();
+  const el=document.getElementById('stocktakeDiff_'+productId); if(el){const sys=stocktakeSystemQty(productId); const has=Object.prototype.hasOwnProperty.call(stocktakeDraft,productId); const d=has?stocktakeDraft[productId]-sys:0; el.textContent=has?((d>0?'+':'')+d.toLocaleString('vi-VN')):'—'; el.style.color=d===0?'var(--leaf-500)':'var(--rust-500)';}
+}
+function renderStocktakeList(){
+  const q=(document.getElementById('stocktakeSearch').value||'').toLowerCase();
+  const list=products.filter(p=>!q||String(p.name||'').toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q));
+  const box=document.getElementById('stocktakeList');
+  box.innerHTML=list.length?list.map(p=>{const has=Object.prototype.hasOwnProperty.call(stocktakeDraft,p.id); const actual=has?stocktakeDraft[p.id]:''; const diff=has?Number(actual)-Number(p.stock||0):0; return `<div class="prod-item"><div style="flex:1;min-width:0;"><div class="prod-name">${escapeHtmlV211(p.name)}</div><div class="prod-meta">Hệ thống: <b class="mono">${Number(p.stock||0).toLocaleString('vi-VN')}</b> ${escapeHtmlV211(p.unit||'')} · Lô: ${lotsForProduct(p.id).length}</div><div class="prod-meta">Chênh: <b id="stocktakeDiff_${p.id}" style="color:${diff===0?'var(--leaf-500)':'var(--rust-500)'};">${has?((diff>0?'+':'')+diff.toLocaleString('vi-VN')):'—'}</b></div></div><div style="width:112px;"><label style="margin:0 0 4px;">Thực tế</label><input type="number" min="0" step="0.001" inputmode="decimal" value="${actual}" placeholder="—" oninput="updateStocktakeDraft('${p.id}',this.value)" style="text-align:right;"></div></div>`;}).join(''):'<div class="empty-state">Không tìm thấy sản phẩm.</div>';
+  updateStocktakeStats();
+}
+function updateStocktakeStats(){
+  const ids=Object.keys(stocktakeDraft);
+  let mismatch=0,net=0,abs=0;
+  ids.forEach(id=>{const d=Number(stocktakeDraft[id])-stocktakeSystemQty(id); if(Math.abs(d)>0.0001)mismatch++; net+=d; abs+=Math.abs(d);});
+  document.getElementById('stocktakeCounted').textContent=ids.length;
+  document.getElementById('stocktakeMismatch').textContent=mismatch;
+  document.getElementById('stocktakeNetDiff').textContent=(net>0?'+':'')+net.toLocaleString('vi-VN');
+  document.getElementById('stocktakePreview').innerHTML=`Đã kiểm <b>${ids.length}</b> mặt hàng · Có chênh <b>${mismatch}</b> · Tổng độ lệch tuyệt đối: <b>${abs.toLocaleString('vi-VN')} ĐV gốc</b>.<br><span class="prod-meta">Các dòng không nhập “Thực tế” sẽ không bị tác động.</span>`;
+}
+function fillStocktakeWithSystem(){ products.forEach(p=>stocktakeDraft[p.id]=Number(p.stock||0)); renderStocktakeList(); }
+function clearStocktakeDraft(){ stocktakeDraft={}; renderStocktakeList(); }
+function allocateLotsForStocktake(productId,qty){
+  let remaining=Number(qty)||0;
+  const ordered=lotsForProduct(productId).slice().sort((a,b)=>{const ae=a.expiry?new Date(a.expiry).getTime():Number.MAX_SAFE_INTEGER;const be=b.expiry?new Date(b.expiry).getTime():Number.MAX_SAFE_INTEGER;if(ae!==be)return ae-be;const at=a.createdAt&&a.createdAt.toMillis?a.createdAt.toMillis():0;const bt=b.createdAt&&b.createdAt.toMillis?b.createdAt.toMillis():0;return at-bt;});
+  const out=[]; for(const l of ordered){if(remaining<=0)break;const take=Math.min(Number(l.qtyRemaining||0),remaining);if(take>0){out.push({lotId:l.id,lotNumber:l.lotNumber||'',qty:take});remaining-=take;}}
+  return {allocations:out,missing:Math.max(0,remaining)};
+}
+async function confirmStocktake(){
+  const btn=document.getElementById('stocktakeConfirmBtn'); if(btn.disabled)return;
+  const ids=Object.keys(stocktakeDraft); if(!ids.length){alert('Bạn chưa nhập số lượng thực tế cho mặt hàng nào.');return;}
+  const changes=[];
+  for(const id of ids){const p=products.find(x=>x.id===id); if(!p)continue; const system=stocktakeSystemQty(id),actual=Number(stocktakeDraft[id]); if(actual<0||!Number.isFinite(actual)){alert('Tồn thực tế không hợp lệ: '+p.name);return;} const diff=actual-system; if(Math.abs(diff)>0.0001)changes.push({p,system,actual,diff});}
+  // Nếu tồn thay đổi kể từ lúc mở kiểm kê, không cho ghi đè số mới.
+  for(const id of ids){const p=products.find(x=>x.id===id); if(p && Math.abs(Number(p.stock||0)-stocktakeSystemQty(id))>0.001){alert('Tồn hệ thống của "'+p.name+'" đã thay đổi trong lúc kiểm kê. Vui lòng đóng và mở lại Kiểm kê kho để lấy số mới.');return;}}
+  // Chặn nếu kho/lô đã lệch trước kiểm kê.
+  for(const x of changes){const lotTotal=lotsForProduct(x.p.id).reduce((sum,l)=>sum+Number(l.qtyRemaining||0),0); if(Math.abs(lotTotal-x.system)>0.001){alert('Dữ liệu lô của "'+x.p.name+'" đang lệch tồn hệ thống. Hãy chạy Kiểm tra sức khỏe dữ liệu trước khi kiểm kê.');return;}}
+  const prepared=[]; let opCount=2;
+  for(const x of changes){if(x.diff<0){const a=allocateLotsForStocktake(x.p.id,-x.diff); if(a.missing>0.001){alert('Không đủ tồn theo lô để điều chỉnh giảm '+x.p.name+'.');return;} x.lotAllocations=a.allocations; opCount+=a.allocations.length;} opCount+=3; prepared.push(x);}
+  if(opCount>450){alert('Phiếu này có quá nhiều điều chỉnh/lô ('+opCount+' thao tác). Hãy kiểm kê theo từng nhóm hàng để đảm bảo an toàn.');return;}
+  const msg=changes.length
+    ? ('Xác nhận kiểm kê '+ids.length+' mặt hàng, điều chỉnh '+changes.length+' mặt hàng có chênh? Hành động sẽ tạo phiếu và cập nhật tồn/lô.')
+    : ('Xác nhận lưu phiếu kiểm kê '+ids.length+' mặt hàng? Tất cả đều khớp tồn hệ thống, không có số liệu nào bị điều chỉnh.');
+  if(!confirm(msg))return;
+  btn.disabled=true;btn.textContent='Đang lưu kiểm kê...';
+  try{
+    const ref=storeRef.collection('stocktakes').doc();
+    const batch=db.batch();
+    const itemRows=[];
+    for(const x of prepared){
+      const pRef=storeRef.collection('products').doc(x.p.id);
+      batch.update(pRef,{stock:x.actual,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      const lotAdjustments=[];
+      if(x.diff>0){
+        const lotRef=storeRef.collection('inventoryLots').doc('stocktake_'+ref.id+'_'+x.p.id);
+        batch.set(lotRef,{productId:x.p.id,productName:x.p.name,lotNumber:'KIEM-KE-TANG',expiry:null,qtyInitial:x.diff,qtyRemaining:x.diff,baseUnit:x.p.unit,unitCost:Number(x.p.avgCost??x.p.cost??0),supplierId:null,supplierName:'',purchaseReceiptId:null,source:'stocktake_positive',stocktakeId:ref.id,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+        lotAdjustments.push({type:'increase',lotId:lotRef.id,lotNumber:'KIEM-KE-TANG',qty:x.diff});
+      }else{
+        for(const a of x.lotAllocations){batch.update(storeRef.collection('inventoryLots').doc(a.lotId),{qtyRemaining:firebase.firestore.FieldValue.increment(-a.qty)});lotAdjustments.push({type:'decrease',lotId:a.lotId,lotNumber:a.lotNumber,qty:a.qty});}
+      }
+      const logRef=storeRef.collection('stockLogs').doc();
+      batch.set(logRef,{type:'stocktake',productId:x.p.id,productName:x.p.name,qty:x.diff,unit:x.p.unit,cost:Number(x.p.avgCost??x.p.cost??0),referenceId:ref.id,systemQty:x.system,actualQty:x.actual,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      itemRows.push({productId:x.p.id,productName:x.p.name,unit:x.p.unit,systemQty:x.system,actualQty:x.actual,diff:x.diff,lotAdjustments});
+    }
+    batch.set(ref,{stocktakeNo:'KK-'+Date.now(),note:document.getElementById('stocktakeNote').value.trim(),countedCount:ids.length,adjustedCount:changes.length,items:itemRows,status:'completed',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    await batch.commit();
+    alert('Đã lưu phiếu kiểm kê. Điều chỉnh '+changes.length+' mặt hàng.');
+    stocktakeDraft={}; stocktakeBaseline={}; products.forEach(p=>stocktakeBaseline[p.id]=Number(p.stock||0)); document.getElementById('stocktakeNote').value=''; renderStocktakeList(); loadStocktakeHistory();
+  }catch(e){alert('Lỗi lưu kiểm kê: '+e.message);}finally{btn.disabled=false;btn.textContent='✅ Xác nhận & điều chỉnh tồn';}
+}
+async function loadStocktakeHistory(){
+  const box=document.getElementById('stocktakeHistory'); box.innerHTML='<div class="empty-state" style="padding:16px;">Đang tải...</div>';
+  try{const snap=await storeRef.collection('stocktakes').orderBy('createdAt','desc').limit(10).get(); stocktakeHistory=snap.docs.map(d=>({id:d.id,...d.data()})); box.innerHTML=stocktakeHistory.length?`<div class="card">${stocktakeHistory.map(x=>{const d=x.createdAt&&x.createdAt.toDate?x.createdAt.toDate():null;return `<div class="prod-item" onclick="openStocktakeDetail('${x.id}')" style="cursor:pointer;"><div style="flex:1;"><div class="prod-name">${escapeHtmlV211(x.stocktakeNo||x.id)}</div><div class="prod-meta">${d?d.toLocaleString('vi-VN'):'—'} · ${Number(x.adjustedCount||0)} mặt hàng lệch</div><div class="prod-meta">${escapeHtmlV211(x.note||'Không ghi chú')}</div></div><div style="color:var(--wheat-400);">›</div></div>`;}).join('')}</div>`:'<div class="empty-state" style="padding:16px;">Chưa có phiếu kiểm kê.</div>';}
+  catch(e){box.innerHTML='<div class="card-tight card" style="color:var(--rust-500);">Không tải được lịch sử: '+escapeHtmlV211(e.message||String(e))+'</div>';}
+}
+function openStocktakeDetail(id){
+  const x=stocktakeHistory.find(r=>r.id===id); if(!x)return;
+  const d=x.createdAt&&x.createdAt.toDate?x.createdAt.toDate():null;
+  const rows=(x.items||[]).map(it=>`<div class="prod-item"><div style="flex:1;"><div class="prod-name">${escapeHtmlV211(it.productName)}</div><div class="prod-meta">Hệ thống ${Number(it.systemQty||0).toLocaleString('vi-VN')} → Thực tế ${Number(it.actualQty||0).toLocaleString('vi-VN')} ${escapeHtmlV211(it.unit||'')}</div></div><div class="mono" style="color:${Number(it.diff||0)===0?'var(--leaf-500)':'var(--rust-500)'};">${Number(it.diff||0)>0?'+':''}${Number(it.diff||0).toLocaleString('vi-VN')}</div></div>`).join('');
+  document.getElementById('stocktakeDetailContent').innerHTML=`<div class="card-tight card"><b>${escapeHtmlV211(x.stocktakeNo||id)}</b><br>${d?d.toLocaleString('vi-VN'):'—'}<br>Đã kiểm: <b>${Number(x.countedCount||0)}</b> mặt hàng · Có lệch: <b>${Number(x.adjustedCount||0)}</b><br>Ghi chú: ${escapeHtmlV211(x.note||'—')}</div><div class="card">${rows||'<div class="empty-state">✅ Không có chênh lệch cần điều chỉnh.</div>'}</div>`;
+  openModal('stocktakeDetailModal');
 }
 
 // ---------- BÁO CÁO ----------
