@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Sổ Nhà Nông V2.1.1</title>
+<title>Sổ Nhà Nông V2.1.2</title>
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="manifest" href="manifest.json">
@@ -282,7 +282,7 @@
 <div id="app">
   <div class="topbar">
     <div>
-      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V2.1.1</span></div>
+      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V2.1.2</span></div>
       <div class="sub" id="storeGreeting">Xin chào</div>
     </div>
     <div style="text-align:right;">
@@ -362,12 +362,9 @@
     </div>
 
     <div id="debtCustomerSection">
-      <button class="btn btn-ghost" style="margin-bottom:10px;" onclick="openAddCustomer()">+ Thêm khách hàng mới</button>
-      <div class="search-box" style="margin-bottom:10px;">
-        <input id="debtSearch" placeholder="Tìm theo tên, số điện thoại..." oninput="renderDebtList()">
-      </div>
       <div class="section-title">Danh sách khách nợ</div>
       <div class="card" id="debtList"></div>
+      <button class="btn btn-ghost" style="margin-top:10px;" onclick="openAddCustomer()">+ Thêm khách hàng mới</button>
     </div>
 
     <div id="debtSupplierSection" style="display:none;">
@@ -816,7 +813,7 @@
 
     <div class="ledger-rule" style="margin:20px 0;"></div>
 
-    <h3>Dữ liệu V2.1.1</h3>
+    <h3>Dữ liệu V2.1.2</h3>
     <div class="card-tight card" id="migrationSettingsStatus" style="font-size:13px; line-height:1.6;">Đang kiểm tra trạng thái...</div>
     <button class="btn btn-ghost" id="migrationCompareBtn" onclick="showMigrationComparisonV21()" style="margin-top:8px;">🧾 Xem đối chiếu nâng cấp</button>
     <button class="btn btn-ghost" onclick="openDataHealthCheck()" style="margin-top:8px;">🩺 Kiểm tra sức khỏe dữ liệu</button>
@@ -2114,17 +2111,31 @@ function onPosDebtToggle(){
   wrap.style.display = document.getElementById('posIsDebt').checked ? 'block' : 'none';
   if (!document.getElementById('posIsDebt').checked) document.getElementById('posPaidNow').value = '';
 }
+function lotAllocationText(it, compact=false){
+  const allocs=Array.isArray(it&&it.lotAllocations)?it.lotAllocations:[];
+  if(!allocs.length) return '';
+  const product=products.find(p=>p.id===it.productId);
+  const baseUnit=it.baseUnit || (product&&product.unit) || (Number(it.unitFactor||1)===1?it.unit:'đv gốc') || 'đv gốc';
+  return allocs.map(a=>{
+    const lot=escapeHtmlV211(a.lotNumber||'Không số lô');
+    const qty=Number(a.baseQty||0).toLocaleString('vi-VN');
+    const exp=a.expiry?(' · HSD '+new Date(a.expiry+'T00:00:00').toLocaleDateString('vi-VN')):'';
+    return compact ? `${lot}: ${qty} ${escapeHtmlV211(baseUnit)}` : `📦 ${lot}${exp} → <b>${qty} ${escapeHtmlV211(baseUnit)}</b>`;
+  }).join(compact?' · ':'<br>');
+}
 function renderInvoice(sale){
   const d = sale.createdAt && sale.createdAt.toDate ? sale.createdAt.toDate() : new Date();
   const dateStr = d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
-  const rows = (sale.items||[]).map(it => `
+  const rows = (sale.items||[]).map(it => {
+    const lotText=lotAllocationText(it,false);
+    return `
     <tr>
-      <td>${it.name}</td>
-      <td>${it.qty} ${it.unit}</td>
+      <td>${escapeHtmlV211(it.name)}${lotText?`<div style="font-size:10.5px;color:#8a7a5f;line-height:1.45;margin-top:4px;">${lotText}</div>`:''}</td>
+      <td>${it.qty} ${escapeHtmlV211(it.unit||'')}</td>
       <td>${money(it.price)}</td>
       <td>${money(it.price*it.qty)}</td>
     </tr>
-  `).join('');
+  `;}).join('');
   document.getElementById('invoiceContent').innerHTML = `
     <div class="inv-store-name">🌾 ${currentStoreName}</div>
     <div class="inv-store-info">
@@ -2226,8 +2237,21 @@ function openDraftOrder(){
   const total=cart.reduce((s,c)=>s+c.price*c.qty,0);
   const pay=validatePaymentForCart(total); if(!pay) return;
   const customer=customers.find(c=>c.id===pay.customerId);
-  let html=`<div class="card-tight card" style="margin-bottom:12px;">Khách hàng: <b>${customer?customer.name:'Khách lẻ'}</b></div><div class="card">`;
-  cart.forEach(c=>{html+=`<div class="prod-item"><div style="flex:1;"><div class="prod-name">${c.name}</div><div class="prod-meta">${c.qty} ${c.unit} x ${money(c.price)}</div></div><div class="mono">${money(c.price*c.qty)}</div></div>`;});
+  for(const p of products){
+    const wanted=cart.filter(c=>c.productId===p.id).reduce((sum,c)=>sum+c.qty*(Number(c.factor)||1),0);
+    if(wanted>availableBaseStock(p)){alert('Không đủ tồn có thể bán của '+p.name+'. Vui lòng kiểm tra lại giỏ hàng.');return;}
+  }
+  const lotPlans=allocateLotsForCart(cart);
+  const legacyIndex=lotPlans.findIndex(x=>Number(x.legacyQty||0)>0.000001);
+  if(legacyIndex>=0){alert('Tồn kho của "'+cart[legacyIndex].name+'" chưa được gắn đủ vào lô. Vui lòng kiểm tra dữ liệu V2.1 trước khi bán.');return;}
+  let html=`<div class="card-tight card" style="margin-bottom:12px;">Khách hàng: <b>${escapeHtmlV211(customer?customer.name:'Khách lẻ')}</b></div>`;
+  html+=`<div class="card-tight card" style="margin-bottom:12px;border-color:var(--leaf-500);"><b style="color:var(--leaf-500);">📦 Lô dự kiến xuất (FEFO)</b><div class="prod-meta" style="margin-top:5px;line-height:1.5;">Hệ thống ưu tiên lô có hạn sử dụng gần nhất trước. Lô đã hết hạn không được đưa vào đơn.</div></div><div class="card">`;
+  cart.forEach((c,i)=>{
+    const product=products.find(p=>p.id===c.productId);
+    const previewItem={...c,unitFactor:Number(c.factor)||1,baseUnit:(product&&product.unit)||c.unit,lotAllocations:lotPlans[i].allocations};
+    const lotText=lotAllocationText(previewItem,false);
+    html+=`<div class="prod-item" style="align-items:flex-start;"><div style="flex:1;"><div class="prod-name">${escapeHtmlV211(c.name)}</div><div class="prod-meta">${c.qty} ${escapeHtmlV211(c.unit)} x ${money(c.price)}</div>${lotText?`<div style="font-size:11.5px;color:var(--wheat-400);line-height:1.6;margin-top:6px;">${lotText}</div>`:''}</div><div class="mono">${money(c.price*c.qty)}</div></div>`;
+  });
   html+='</div>';
   html+=`<div class="cart-total grand" style="margin-top:10px;"><span>Tổng cộng</span><span class="mono">${money(total)}</span></div>`;
   html+=pay.isDebt?`<div class="card-tight card" style="margin-top:10px;color:var(--rust-500);">Khách trả trước: <b class="mono">${money(pay.paidNow)}</b><br>Còn nợ lại: <b class="mono">${money(pay.debtAmount)}</b></div>`:`<div class="card-tight card" style="margin-top:10px;color:var(--leaf-500);">Khách thanh toán đủ: <b class="mono">${money(total)}</b></div>`;
@@ -2249,7 +2273,7 @@ function checkout(){
     alert('Tồn kho của "'+cart[legacyIndex].name+'" chưa được gắn đủ vào lô. Vui lòng vào Cài đặt > Dữ liệu V2.1 để kiểm tra trước khi bán.');
     return;
   }
-  const saleItems=cart.map((c,i)=>({productId:c.productId,name:c.name,price:c.price,qty:c.qty,unit:c.unit,unitFactor:Number(c.factor)||1,baseQty:c.qty*(Number(c.factor)||1),cost:c.cost||0,lotAllocations:lotPlans[i].allocations,legacyQty:0}));
+  const saleItems=cart.map((c,i)=>{const p=products.find(x=>x.id===c.productId);return {productId:c.productId,name:c.name,price:c.price,qty:c.qty,unit:c.unit,unitFactor:Number(c.factor)||1,baseUnit:(p&&p.unit)||c.unit,baseQty:c.qty*(Number(c.factor)||1),cost:c.cost||0,lotAllocations:lotPlans[i].allocations,legacyQty:0};});
   const batch=db.batch(); const saleRef=storeRef.collection('sales').doc();
   batch.set(saleRef,{items:saleItems,total,paidAmount:pay.paidNow,debtAmount:pay.debtAmount,customerId:pay.customerId||null,customerName:customer?customer.name:'Khách lẻ',isDebt:!!pay.isDebt,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
   const lotTotals={};
@@ -2281,15 +2305,7 @@ function renderDebtList(){
     box.innerHTML = '<div class="empty-state"><div class="ic">📒</div>Chưa có khách hàng nào.</div>';
     return;
   }
-  const keyword = (document.getElementById('debtSearch').value || '').trim().toLowerCase();
-  const filtered = customers.filter(c =>
-    !keyword || c.name.toLowerCase().includes(keyword) || (c.phone||'').toLowerCase().includes(keyword)
-  );
-  if (!filtered.length){
-    box.innerHTML = '<div class="empty-state"><div class="ic">🔍</div>Không tìm thấy khách hàng phù hợp.</div>';
-    return;
-  }
-  box.innerHTML = filtered.map(c => `
+  box.innerHTML = customers.map(c => `
     <div class="prod-item" style="align-items:flex-start;">
       <div class="prod-ic">👤</div>
       <div style="flex:1;">
@@ -2865,7 +2881,7 @@ function renderReports(){
   const topBox=document.getElementById('topProductsList');
   topBox.innerHTML=top.length?top.map(([name,qty],i)=>`<div class="prod-item"><div style="width:26px;color:var(--wheat-400);font-weight:700;">${i+1}</div><div style="flex:1;">${name}</div><div class="mono">${Number(qty).toLocaleString('vi-VN')} ĐV gốc</div></div>`).join(''):'<div class="empty-state">Chưa có dữ liệu bán hàng tháng này.</div>';
   const recentBox=document.getElementById('recentSales');
-  recentBox.innerHTML=sales.slice(0,10).map(s=>`<div class="prod-item"><div style="flex:1;"><div class="prod-name">${s.customerName||'Khách lẻ'}</div><div class="prod-meta">${(s.items||[]).length} sản phẩm ${s.isDebt?'· Ghi nợ':''}</div></div><div style="text-align:right;"><div class="mono">${money(s.total)}</div><div style="display:flex;gap:4px;margin-top:4px;justify-content:flex-end;"><button class="btn btn-sm btn-ghost" onclick="reprintSale('${s.id}')">🖨️ In</button><button class="btn btn-sm btn-ghost" onclick="openReturnModal('${s.id}')">↩️ Trả</button></div></div></div>`).join('')||'<div class="empty-state">Chưa có hoá đơn nào.</div>';
+  recentBox.innerHTML=sales.slice(0,10).map(s=>{const lotNames=[...new Set((s.items||[]).flatMap(it=>(it.lotAllocations||[]).map(a=>a.lotNumber||'Không số lô')))];return `<div class="prod-item"><div style="flex:1;"><div class="prod-name">${escapeHtmlV211(s.customerName||'Khách lẻ')}</div><div class="prod-meta">${(s.items||[]).length} sản phẩm ${s.isDebt?'· Ghi nợ':''}</div>${lotNames.length?`<div class="prod-meta" style="color:var(--wheat-400);">📦 Lô xuất: ${lotNames.map(escapeHtmlV211).join(', ')}</div>`:''}</div><div style="text-align:right;"><div class="mono">${money(s.total)}</div><div style="display:flex;gap:4px;margin-top:4px;justify-content:flex-end;"><button class="btn btn-sm btn-ghost" onclick="reprintSale('${s.id}')">🖨️ In</button><button class="btn btn-sm btn-ghost" onclick="openReturnModal('${s.id}')">↩️ Trả</button></div></div></div>`;}).join('')||'<div class="empty-state">Chưa có hoá đơn nào.</div>';
 }
 </script>
 </body>
