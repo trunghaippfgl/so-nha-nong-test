@@ -362,9 +362,12 @@
     </div>
 
     <div id="debtCustomerSection">
+      <button class="btn btn-ghost" style="margin-bottom:10px;" onclick="openAddCustomer()">+ Thêm khách hàng mới</button>
+      <div class="search-box" style="margin-bottom:10px;">
+        <input id="debtSearch" placeholder="Tìm theo tên, số điện thoại..." oninput="renderDebtList()">
+      </div>
       <div class="section-title">Danh sách khách nợ</div>
       <div class="card" id="debtList"></div>
-      <button class="btn btn-ghost" style="margin-top:10px;" onclick="openAddCustomer()">+ Thêm khách hàng mới</button>
     </div>
 
     <div id="debtSupplierSection" style="display:none;">
@@ -2278,7 +2281,15 @@ function renderDebtList(){
     box.innerHTML = '<div class="empty-state"><div class="ic">📒</div>Chưa có khách hàng nào.</div>';
     return;
   }
-  box.innerHTML = customers.map(c => `
+  const keyword = (document.getElementById('debtSearch').value || '').trim().toLowerCase();
+  const filtered = customers.filter(c =>
+    !keyword || c.name.toLowerCase().includes(keyword) || (c.phone||'').toLowerCase().includes(keyword)
+  );
+  if (!filtered.length){
+    box.innerHTML = '<div class="empty-state"><div class="ic">🔍</div>Không tìm thấy khách hàng phù hợp.</div>';
+    return;
+  }
+  box.innerHTML = filtered.map(c => `
     <div class="prod-item" style="align-items:flex-start;">
       <div class="prod-ic">👤</div>
       <div style="flex:1;">
