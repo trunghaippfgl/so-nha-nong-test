@@ -411,6 +411,30 @@
 
   <button class="fab" id="addProductFab" onclick="openAddProduct()">+</button>
 </div>
+<div id="branchSelectScreen" style="display:none; position:fixed; inset:0; background:var(--bg); z-index:200; align-items:center; justify-content:center; padding:20px;">
+  <div style="max-width:420px; width:100%; background:var(--card-bg); border-radius:16px; padding:24px; max-height:85vh; overflow-y:auto;">
+    <h2 style="margin-top:0;">🏢 Chọn cơ sở làm việc</h2>
+    <div id="branchListBox"></div>
+    <button class="btn btn-ghost" style="margin-top:14px; width:100%;" onclick="openAddBranch()">+ Thêm cơ sở mới</button>
+    <button class="btn" style="margin-top:10px; width:100%; background:none; color:#888;" onclick="auth.signOut()">Đăng xuất</button>
+  </div>
+</div>
+
+<div class="overlay" id="branchModal">
+  <div class="sheet">
+    <button class="sheet-close" onclick="closeModal('branchModal')">✕</button>
+    <h3>Thêm cơ sở mới</h3>
+    <label>Tên cơ sở *</label>
+    <input id="branchName" placeholder="VD: Cơ sở Ayun Pa">
+    <label>Địa chỉ</label>
+    <input id="branchAddress" placeholder="Không bắt buộc">
+    <label>Số điện thoại</label>
+    <input id="branchPhone" placeholder="Không bắt buộc">
+    <div style="margin-top:16px;">
+      <button class="btn btn-primary" onclick="saveBranch()">Lưu cơ sở</button>
+    </div>
+  </div>
+</div>
 
 <!-- ============ NÂNG CẤP DỮ LIỆU V2.1 ============ -->
 <div id="migrationScreen" style="display:none; min-height:100vh; flex-direction:column; align-items:center; justify-content:flex-start; padding:26px 16px 40px;">
@@ -995,6 +1019,9 @@ let pendingStoreName = '';
 let currentStoreName = 'Cửa hàng';
 let currentStorePhone = '';
 let currentStoreAddress = '';
+let branchList = [];
+let currentBranchId = null;
+let currentBranchName = '';
 
 function switchAuthTab(tab){
   document.getElementById('tabLogin').classList.toggle('active', tab==='login');
@@ -1182,9 +1209,7 @@ auth.onAuthStateChanged(async user => {
         return;
       }
       if(data.migrationV21Complete===true || ['2.1','2.1.1'].includes(String(data.schemaVersion||''))){
-        document.getElementById('app').style.display='block';
-        startStoreListenersV21();
-        updateMigrationSettingsStatusV21();
+        await checkAndShowBranchesV21();
       }else{
         document.getElementById('migrationScreen').style.display='flex';
         await prepareMigrationV21();
@@ -1201,7 +1226,81 @@ auth.onAuthStateChanged(async user => {
     hideAllGateScreensV21();
   }
 });
+async function checkAndShowBranchesV21(){
+  const uid = auth.currentUser.uid;
+  const snap = await db.collection('stores').doc(uid).collection('branches').get();
+  branchList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
+  if (!branchList.length){
+    // Không có cơ sở nào -> chạy như bình thường, không đổi gì (tương thích ngược 100%)
+    storeRef = db.collection('stores').doc(uid);
+    document.getElementById('app').style.display = 'block';
+    startStoreListenersV21();
+    updateMigrationSettingsStatusV21();
+    return;
+  }
+
+  renderBranchSelector();
+  document.getElementById('branchSelectScreen').style.display = 'flex';
+}
+
+function renderBranchSelector(){
+  const box = document.getElementById('branchListBox');
+  box.innerHTML = branchList.map(b => `
+    <div class="prod-item" style="cursor:pointer;" onclick="selectBranch('${b.id}')">
+      <div class="prod-ic">🏢</div>
+      <div style="flex:1;">
+        <div class="prod-name">${b.name}</div>
+        <div class="prod-meta">${b.address || ''}</div>
+      </div>
+      <div>›</div>
+    </div>
+  `).join('');
+}
+
+function selectBranch(branchId){
+  const uid = auth.currentUser.uid;
+  storeRef = db.collection('stores').doc(uid).collection('branches').doc(branchId);
+  currentBranchId = branchId;
+  const b = branchList.find(x => x.id === branchId);
+  currentBranchName = b ? b.name : '';
+  document.getElementById('branchSelectScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  const greetEl = document.getElementById('storeGreeting');
+  if (greetEl) greetEl.textContent = 'Xin chào, ' + currentStoreName + ' - ' + currentBranchName;
+  startStoreListenersV21();
+  updateMigrationSettingsStatusV21();
+}
+
+function openAddBranch(){
+  document.getElementById('branchName').value = '';
+  document.getElementById('branchAddress').value = '';
+  document.getElementById('branchPhone').value = '';
+  openModal('branchModal');
+}
+
+function saveBranch(){
+  const name = document.getElementById('branchName').value.trim();
+  if (!name){ alert('Nhập tên cơ sở.'); return; }
+  const uid = auth.currentUser.uid;
+  db.collection('stores').doc(uid).collection('branches').add({
+    name,
+    address: document.getElementById('branchAddress').value.trim(),
+    phone: document.getElementById('branchPhone').value.trim(),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(async () => {
+    closeModal('branchModal');
+    const snap = await db.collection('stores').doc(uid).collection('branches').get();
+    branchList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderBranchSelector();
+  }).catch(e => alert('Lỗi: ' + e.message));
+}
+
+function switchBranch(){
+  document.getElementById('app').style.display = 'none';
+  renderBranchSelector();
+  document.getElementById('branchSelectScreen').style.display = 'flex';
+}
 // ---------- MIGRATION V2.1 AN TOÀN ----------
 function migrationDocIdV21(prefix,id){ return prefix+'_'+id; }
 function migrationMoneyEqV21(a,b){ return Math.abs(Number(a||0)-Number(b||0)) < 0.01; }
