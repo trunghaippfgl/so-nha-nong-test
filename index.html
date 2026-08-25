@@ -1157,16 +1157,32 @@ function showForgotPassword(){
   openModal('forgotPasswordModal');
 }
 
+let storeUnsubscribes = [];
+
+function collectUnsub(result){
+  if (!result) return;
+  if (Array.isArray(result)) storeUnsubscribes.push(...result.filter(Boolean));
+  else storeUnsubscribes.push(result);
+}
+
 function startStoreListenersV21(){
   if (storeListenersStarted || !storeRef) return;
   storeListenersStarted = true;
-  listenProducts();
-  listenCustomers();
-  listenSales();
-  listenDebtPayments();
-  listenSuppliers();
-  listenInventoryLots();
-  listenReportData();
+  collectUnsub(listenProducts());
+  collectUnsub(listenCustomers());
+  collectUnsub(listenSales());
+  collectUnsub(listenDebtPayments());
+  collectUnsub(listenSuppliers());
+  collectUnsub(listenInventoryLots());
+  collectUnsub(listenReportData());
+}
+
+function stopStoreListenersV21(){
+  storeUnsubscribes.forEach(unsub => { try { unsub(); } catch(e){} });
+  storeUnsubscribes = [];
+  storeListenersStarted = false;
+  products = []; customers = []; sales = []; debtPayments = []; suppliers = [];
+  inventoryLots = []; reportSales = []; reportDebtPayments = [];
 }
 function hideAllGateScreensV21(){
   document.getElementById('migrationScreen').style.display='none';
@@ -1325,6 +1341,7 @@ function saveBranch(){
 }
 
 function switchBranch(){
+  stopStoreListenersV21();
   document.getElementById('app').style.display = 'none';
   renderBranchSelector();
   document.getElementById('branchSelectScreen').style.display = 'flex';
@@ -1558,7 +1575,7 @@ async function showMigrationComparisonV21(){
 
 // ---------- FIRESTORE LISTENERS ----------
 function listenProducts(){
-  storeRef.collection('products').orderBy('name').onSnapshot(snap => {
+  return storeRef.collection('products').orderBy('name').onSnapshot(snap => {
     products = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     renderStockList();
     renderPosProductList();
@@ -1567,32 +1584,32 @@ function listenProducts(){
   });
 }
 function listenCustomers(){
-  storeRef.collection('customers').orderBy('name').onSnapshot(snap => {
+ return storeRef.collection('customers').orderBy('name').onSnapshot(snap => {
     customers = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     renderDebtList();
     fillPosCustomerSelect();
   });
 }
 function listenSales(){
-  storeRef.collection('sales').orderBy('createdAt','desc').limit(200).onSnapshot(snap => {
+ return storeRef.collection('sales').orderBy('createdAt','desc').limit(200).onSnapshot(snap => {
     sales = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     renderReports();
   });
 }
 function listenDebtPayments(){
-  storeRef.collection('debtPayments').orderBy('createdAt','desc').limit(200).onSnapshot(snap => {
+ return storeRef.collection('debtPayments').orderBy('createdAt','desc').limit(200).onSnapshot(snap => {
     debtPayments = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     renderReports();
   });
 } 
 function listenSuppliers(){
-  storeRef.collection('suppliers').orderBy('name').onSnapshot(snap => {
+ return storeRef.collection('suppliers').orderBy('name').onSnapshot(snap => {
     suppliers = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     renderSupplierList();
   });
 }
 function listenInventoryLots(){
-  storeRef.collection('inventoryLots').onSnapshot(snap => {
+ return storeRef.collection('inventoryLots').onSnapshot(snap => {
     inventoryLots = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     renderStockList();
     renderReports();
@@ -1601,14 +1618,15 @@ function listenInventoryLots(){
 function listenReportData(){
   const now = new Date();
   const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  storeRef.collection('sales').where('createdAt','>=',startMonth).onSnapshot(snap => {
+  const unsub1 = storeRef.collection('sales').where('createdAt','>=',startMonth).onSnapshot(snap => {
     reportSales = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     renderReports();
   });
-  storeRef.collection('debtPayments').where('createdAt','>=',startMonth).onSnapshot(snap => {
+  const unsub2 = storeRef.collection('debtPayments').where('createdAt','>=',startMonth).onSnapshot(snap => {
     reportDebtPayments = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     renderReports();
   });
+  return [unsub1, unsub2];
 }
 function productAltUnits(p){
   return Array.isArray(p.altUnits) ? p.altUnits.filter(u => u && u.name && Number(u.factor) > 0) : [];
