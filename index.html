@@ -831,13 +831,22 @@
     <input id="settingStorePhone" placeholder="VD: 0905 123 456">
     <label>Địa chỉ</label>
     <input id="settingStoreAddress" placeholder="VD: Thôn 1, xã Ayun Pa, Gia Lai">
-    <div style="margin-top:16px;">
+        <div style="margin-top:16px;">
       <button class="btn btn-primary" onclick="saveStoreSettings()">Lưu thông tin</button>
+    </div>
+
+    <div id="branchSwitchSection" style="display:none; margin-top:16px;">
+      <div class="ledger-rule" style="margin-bottom:16px;"></div>
+      <h3>Cơ sở</h3>
+      <div class="card-tight card" style="margin-bottom:8px;">
+        Đang làm việc tại: <b id="currentBranchLabel"></b>
+      </div>
+      <button class="btn btn-ghost" onclick="closeModal('storeSettingsModal'); switchBranch();">🔁 Đổi sang cơ sở khác</button>
     </div>
 
     <div class="ledger-rule" style="margin:20px 0;"></div>
 
-    <h3>Dữ liệu V2.1.2</h3>
+    <h3>Dữ liệu V2.2</h3>
     <div class="card-tight card" id="migrationSettingsStatus" style="font-size:13px; line-height:1.6;">Đang kiểm tra trạng thái...</div>
     <button class="btn btn-ghost" id="migrationCompareBtn" onclick="showMigrationComparisonV21()" style="margin-top:8px;">🧾 Xem đối chiếu nâng cấp</button>
     <button class="btn btn-ghost" onclick="openDataHealthCheck()" style="margin-top:8px;">🩺 Kiểm tra sức khỏe dữ liệu</button>
@@ -1285,6 +1294,8 @@ function selectBranch(branchId){
   document.getElementById('app').style.display = 'block';
   const greetEl = document.getElementById('storeGreeting');
   if (greetEl) greetEl.textContent = 'Xin chào, ' + currentStoreName + ' - ' + currentBranchName;
+  document.getElementById('branchSwitchSection').style.display = 'block';
+  document.getElementById('currentBranchLabel').textContent = currentBranchName;
   startStoreListenersV21();
   updateMigrationSettingsStatusV21();
 }
