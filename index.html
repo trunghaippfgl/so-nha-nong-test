@@ -239,7 +239,7 @@
     #invoiceArea{ display:block !important; position:absolute; top:0; left:0; width:100%; }
   }
 
-/* ===== V3.0 MULTI-BRANCH ===== */
+/* ===== V3.1 MULTI-BRANCH + STOCK TRANSFER ===== */
 .branch-toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .branch-toolbar select{min-width:145px;padding:7px 9px;font-size:12px;margin:0}
 .branch-chip{font-size:11px;padding:5px 8px;border:1px solid var(--line);border-radius:999px;color:var(--cream-300);background:var(--soil-900)}
@@ -261,7 +261,7 @@
 <div id="loginScreen">
   <div class="logo">🌾</div>
   <h1>Sổ Nhà Nông</h1>
-  <div class="tag">Quản lý bán hàng · Kho · Công nợ</div>
+  <div class="tag">Đa cơ sở · Chủ hệ thống & nhân viên cùng đăng nhập</div>
   <div class="box">
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Đăng nhập</button>
@@ -297,7 +297,7 @@
 <div id="app">
   <div class="topbar">
     <div>
-      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V3 Native</span></div>
+      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V3.1</span></div>
       <div class="sub" id="storeGreeting">Xin chào</div>
       <div class="branch-toolbar" id="branchToolbar" style="display:none;">
         <select id="branchSwitcher" onchange="switchBranchV3(this.value)"></select>
@@ -367,6 +367,7 @@
       <button class="btn btn-ghost" style="flex:1; min-width:125px;" onclick="document.getElementById('excelImportInput').click()">📥 Nhập Excel</button>
       <button class="btn btn-leaf" style="flex:1; min-width:150px;" onclick="openBulkStockIn()">📋 Phiếu nhập nhiều SP</button>
       <button class="btn btn-ghost" style="flex:1; min-width:125px;" onclick="openStocktake()">🧮 Kiểm kê kho</button>
+      <button class="btn btn-ghost" style="flex:1; min-width:145px;" onclick="openStockTransferV31()">🚚 Chuyển kho</button>
       <input type="file" id="excelImportInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelImport(event)">
     </div>
     <div class="card" id="stockList"></div>
@@ -1083,6 +1084,41 @@
 
 <!-- ============ FIREBASE ============ -->
 
+<!-- ============ V3.1: CHUYỂN KHO GIỮA CÁC CƠ SỞ ============ -->
+<div class="overlay" id="stockTransferModalV31">
+  <div class="sheet" style="max-width:760px;max-height:92vh;overflow-y:auto;">
+    <button class="sheet-close" onclick="closeModal('stockTransferModalV31')">✕</button>
+    <h3>🚚 Chuyển kho giữa các cơ sở</h3>
+    <div class="card-tight card" style="font-size:12px;line-height:1.55;">
+      Hàng được trừ khỏi <b>cơ sở gửi</b> ngay khi tạo phiếu và ở trạng thái <b>Đang chuyển</b>.
+      Cơ sở nhận chỉ được cộng tồn sau khi bấm <b>Xác nhận đã nhận</b>. Lô/HSD được giữ nguyên.
+    </div>
+
+    <div class="grid-2" style="margin-top:10px;">
+      <div><label>Từ cơ sở</label><input id="transferFromV31" disabled></div>
+      <div><label>Đến cơ sở *</label><select id="transferToV31"></select></div>
+    </div>
+
+    <div class="section-title" style="margin-top:14px;">Thêm hàng vào phiếu</div>
+    <label>Sản phẩm</label><select id="transferProductV31" onchange="onTransferProductChangeV31()"></select>
+    <div class="grid-2">
+      <div><label>Đơn vị</label><select id="transferUnitV31"></select></div>
+      <div><label>Lô / HSD *</label><select id="transferLotV31" onchange="updateTransferPreviewV31()"></select></div>
+    </div>
+    <label>Số lượng chuyển *</label><input id="transferQtyV31" type="number" min="0" step="0.001" inputmode="decimal" placeholder="0" oninput="updateTransferPreviewV31()">
+    <div id="transferPreviewV31" class="card-tight card" style="font-size:12px;line-height:1.55;margin-top:8px;">Chọn sản phẩm và lô để xem số lượng có thể chuyển.</div>
+    <button class="btn btn-leaf" style="margin-top:8px;" onclick="addStockTransferItemV31()">+ Thêm vào phiếu chuyển</button>
+
+    <div class="section-title" style="margin-top:16px;">Hàng sẽ chuyển</div>
+    <div id="stockTransferItemsV31" class="card"><div class="empty-state">Chưa có hàng trong phiếu.</div></div>
+    <label>Ghi chú</label><textarea id="transferNoteV31" rows="2" placeholder="VD: Bổ sung hàng cho cơ sở 2"></textarea>
+    <button class="btn btn-primary" id="createTransferBtnV31" onclick="createStockTransferV31()" style="margin-top:10px;">🚚 Tạo phiếu & xuất khỏi kho gửi</button>
+
+    <div class="section-title" style="margin-top:20px;">Phiếu liên quan đến cơ sở này</div>
+    <div id="stockTransferHistoryV31"><div class="empty-state">Đang tải...</div></div>
+  </div>
+</div>
+
 <!-- ============ V3: TỔNG QUAN HỆ THỐNG ============ -->
 <div class="overlay" id="systemDashboardModal">
   <div class="sheet" style="max-width:760px;max-height:92vh;overflow-y:auto;">
@@ -1192,6 +1228,7 @@ let stocktakeDraft = {};
 let stocktakeBaseline = {};
 let stocktakeHistory = [];
 let bulkStockInItems = [];
+let stockTransferItemsV31 = [];
 let expenses = [];
 let profitSettings = {taxMode:'manual',taxRate1:0,taxRate2:0,taxProfitRate:0,taxManual:0,targetProfit:0,trackingStartDate:''};
 let storeListenersStarted = false;
@@ -1301,7 +1338,7 @@ function doLogin(){
   auth.signInWithEmailAndPassword(internalEmail, pass).catch(e => {
     setButtonLoading(btn, false, 'Đăng nhập');
     if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-login-credentials' || e.code === 'auth/invalid-credential'){
-      err.textContent = 'Không tìm thấy cửa hàng "' + username + '". Kiểm tra lại tên, hoặc chuyển qua tab "Đăng ký mới".';
+      err.textContent = 'Tên đăng nhập hoặc mật khẩu không đúng.';
     } else if (e.code === 'auth/wrong-password'){
       err.textContent = 'Sai mật khẩu.';
     } else {
@@ -2828,6 +2865,92 @@ async function loadStaffListV3(){const box=document.getElementById('staffListV3'
 function openCreateStaffV3(){if(!requireV3('staff'))return;document.getElementById('staffNameV3').value='';document.getElementById('staffUsernameV3').value='';document.getElementById('staffPasswordV3').value='';document.getElementById('staffBranchV3').innerHTML=branchesV3.map(b=>`<option value="${b.id}">${escapeHtmlV211(b.code||b.id)} · ${escapeHtmlV211(b.name)}</option>`).join('');openModal('createStaffModalV3');}
 async function createStaffV3(){if(!requireV3('staff'))return;const name=document.getElementById('staffNameV3').value.trim(),username=document.getElementById('staffUsernameV3').value.trim(),password=document.getElementById('staffPasswordV3').value,branchId=document.getElementById('staffBranchV3').value,role=document.getElementById('staffRoleV3').value,btn=document.getElementById('createStaffBtnV3');if(!name||!username||!branchId||!role){alert('Điền đủ thông tin.');return;}if(password.length<6){alert('Mật khẩu tối thiểu 6 ký tự.');return;}const email=slugify(username)+'@so-nha-nong.local';btn.disabled=true;btn.textContent='Đang tạo...';let secondary=null;try{try{secondary=firebase.app('StaffCreatorV3');}catch(_){secondary=firebase.initializeApp(firebaseConfig,'StaffCreatorV3');}const cred=await secondary.auth().createUserWithEmailAndPassword(email,password),uid=cred.user.uid;await secondary.auth().signOut();const batch=db.batch();batch.set(storeRef.collection('members').doc(uid),{uid,name,username,role,branchId,active:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()});batch.set(db.collection('userAccess').doc(uid),{organizationId:organizationIdV3,role,branchId,active:true,username,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});await batch.commit();closeModal('createStaffModalV3');await loadStaffListV3();alert('Đã tạo tài khoản.\nMã đăng nhập: '+username+'\nCơ sở: '+branchNameV3(branchId)+'\nVai trò: '+roleNameV3(role));}catch(e){alert('Không tạo được nhân viên: '+e.message+'\nNếu báo permission-denied, hãy cập nhật Firestore Rules V3.');}finally{btn.disabled=false;btn.textContent='Tạo tài khoản';}}
 async function toggleStaffV3(uid,enable){if(!requireV3('staff'))return;if(!confirm((enable?'Mở lại':'Khóa')+' tài khoản này?'))return;const member=await storeRef.collection('members').doc(uid).get();if(!member.exists)return;const data=member.data();const batch=db.batch();batch.update(storeRef.collection('members').doc(uid),{active:enable,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});batch.set(db.collection('userAccess').doc(uid),{organizationId:organizationIdV3,role:data.role,branchId:data.branchId,active:enable,username:data.username||'',updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});await batch.commit();await loadStaffListV3();}
+
+// ---------- V3.1: Chuyển kho giữa các cơ sở ----------
+function transferStatusNameV31(status){return ({in_transit:'🚚 Đang chuyển',received:'✅ Đã nhận',cancelled:'↩️ Đã hủy'})[status]||status||'—';}
+function transferStatusClassV31(status){return status==='received'?'badge':status==='cancelled'?'badge warn':'badge warn';}
+function transferLotsEligibleV31(productId){
+  return lotsForProduct(productId).filter(l=>Number(l.qtyRemaining||0)>0 && (!l.expiry || lotDaysToExpiry(l)>=0)).sort((a,b)=>{
+    const ae=a.expiry?new Date(a.expiry).getTime():Number.MAX_SAFE_INTEGER,be=b.expiry?new Date(b.expiry).getTime():Number.MAX_SAFE_INTEGER;
+    if(ae!==be)return ae-be; return tsMillisV3(a.createdAt)-tsMillisV3(b.createdAt);
+  });
+}
+async function openStockTransferV31(){
+  if(!requireV3('stock'))return;
+  await loadBranchesV3();
+  const targets=branchesV3.filter(b=>b.id!==currentBranchIdV3);
+  if(!targets.length){alert('Cần ít nhất 2 cơ sở để chuyển kho.');return;}
+  stockTransferItemsV31=[];
+  document.getElementById('transferFromV31').value=(branchesV3.find(b=>b.id===currentBranchIdV3)?.code||currentBranchIdV3)+' · '+branchNameV3(currentBranchIdV3);
+  document.getElementById('transferToV31').innerHTML=targets.map(b=>`<option value="${b.id}">${escapeHtmlV211(b.code||b.id)} · ${escapeHtmlV211(b.name||b.id)}</option>`).join('');
+  document.getElementById('transferProductV31').innerHTML='<option value="">-- Chọn sản phẩm --</option>'+products.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'vi')).filter(p=>Number(p.stock||0)>0).map(p=>`<option value="${p.id}">${escapeHtmlV211(p.name)} · tồn ${Number(p.stock||0).toLocaleString('vi-VN')} ${escapeHtmlV211(p.unit||'ĐV')}</option>`).join('');
+  document.getElementById('transferUnitV31').innerHTML='<option value="">-- Chọn sản phẩm trước --</option>';
+  document.getElementById('transferLotV31').innerHTML='<option value="">-- Chọn sản phẩm trước --</option>';
+  document.getElementById('transferQtyV31').value='';document.getElementById('transferNoteV31').value='';
+  renderStockTransferItemsV31();updateTransferPreviewV31();openModal('stockTransferModalV31');await loadStockTransferHistoryV31();
+}
+function onTransferProductChangeV31(){
+  const p=products.find(x=>x.id===document.getElementById('transferProductV31').value),u=document.getElementById('transferUnitV31'),l=document.getElementById('transferLotV31');
+  if(!p){u.innerHTML='<option value="">-- Chọn sản phẩm trước --</option>';l.innerHTML='<option value="">-- Chọn sản phẩm trước --</option>';updateTransferPreviewV31();return;}
+  u.innerHTML=allProductUnits(p).map(x=>`<option value="${encodeURIComponent(x.name)}">${escapeHtmlV211(x.name)}${Number(x.factor)!==1?' · 1 = '+Number(x.factor).toLocaleString('vi-VN')+' '+escapeHtmlV211(p.unit):''}</option>`).join('');
+  const lots=transferLotsEligibleV31(p.id);
+  l.innerHTML=lots.length?lots.map(x=>`<option value="${x.id}">Lô ${escapeHtmlV211(x.lotNumber||'Không số')} · còn ${Number(x.qtyRemaining||0).toLocaleString('vi-VN')} ${escapeHtmlV211(p.unit)}${x.expiry?' · HSD '+escapeHtmlV211(x.expiry):''}</option>`).join(''):'<option value="">Không có lô còn hàng có thể chuyển</option>';
+  document.getElementById('transferQtyV31').value='';updateTransferPreviewV31();
+}
+function getTransferSelectedUnitV31(p){const raw=document.getElementById('transferUnitV31').value,name=raw?decodeURIComponent(raw):'';return allProductUnits(p).find(x=>x.name===name)||{name:p.unit||'ĐV',factor:1};}
+function updateTransferPreviewV31(){
+  const box=document.getElementById('transferPreviewV31');if(!box)return;const p=products.find(x=>x.id===document.getElementById('transferProductV31').value),lot=inventoryLots.find(x=>x.id===document.getElementById('transferLotV31').value);
+  if(!p||!lot){box.innerHTML='Chọn sản phẩm và lô để xem số lượng có thể chuyển.';return;}
+  const u=getTransferSelectedUnitV31(p),qty=parseFloat(document.getElementById('transferQtyV31').value)||0,baseQty=qty*(Number(u.factor)||1),remain=Number(lot.qtyRemaining||0),cost=Number(p.avgCost??p.cost??0);
+  box.innerHTML=`Lô: <b>${escapeHtmlV211(lot.lotNumber||'Không số')}</b>${lot.expiry?' · HSD <b>'+escapeHtmlV211(lot.expiry)+'</b>':''}<br>Còn trong lô: <b>${remain.toLocaleString('vi-VN')} ${escapeHtmlV211(p.unit)}</b><br>Quy đổi chuyển: <b>${baseQty.toLocaleString('vi-VN')} ${escapeHtmlV211(p.unit)}</b>${baseQty>remain?'<br><span class="v3-danger">⚠️ Vượt số lượng còn trong lô.</span>':''}<br>Giá vốn chuyển dự kiến: <b>${money(cost)}/${escapeHtmlV211(p.unit)}</b>`;
+}
+function addStockTransferItemV31(){
+  const p=products.find(x=>x.id===document.getElementById('transferProductV31').value),lot=inventoryLots.find(x=>x.id===document.getElementById('transferLotV31').value);if(!p||!lot){alert('Chọn sản phẩm và lô.');return;}
+  const u=getTransferSelectedUnitV31(p),qty=parseFloat(document.getElementById('transferQtyV31').value)||0,factor=Number(u.factor)||1,baseQty=qty*factor,remain=Number(lot.qtyRemaining||0);if(qty<=0){alert('Số lượng chuyển phải lớn hơn 0.');return;}if(baseQty>remain+0.000001){alert('Số lượng chuyển vượt số lượng còn trong lô.');return;}if(stockTransferItemsV31.some(x=>x.sourceLotId===lot.id)){alert('Lô này đã có trong phiếu. Hãy xóa dòng cũ nếu muốn đổi số lượng.');return;}
+  stockTransferItemsV31.push({tempId:Date.now()+'_'+Math.random().toString(36).slice(2,7),productId:p.id,productName:p.name,qty,unit:u.name,factor,baseQty,baseUnit:p.unit||'ĐV',sourceLotId:lot.id,lotNumber:lot.lotNumber||'',expiry:lot.expiry||null,sourceSupplierId:lot.supplierId||null,sourceSupplierName:lot.supplierName||'',originPurchaseReceiptId:lot.purchaseReceiptId||null,previewCost:Number(p.avgCost??p.cost??0)});
+  document.getElementById('transferQtyV31').value='';renderStockTransferItemsV31();updateTransferPreviewV31();
+}
+function removeStockTransferItemV31(id){stockTransferItemsV31=stockTransferItemsV31.filter(x=>x.tempId!==id);renderStockTransferItemsV31();}
+function renderStockTransferItemsV31(){
+  const box=document.getElementById('stockTransferItemsV31');if(!box)return;box.innerHTML=stockTransferItemsV31.length?stockTransferItemsV31.map((x,i)=>`<div class="prod-item" style="align-items:flex-start;"><div style="width:24px;color:var(--wheat-400);font-weight:700;">${i+1}</div><div style="flex:1;min-width:0;"><div class="prod-name">${escapeHtmlV211(x.productName)}</div><div class="prod-meta">${Number(x.qty).toLocaleString('vi-VN')} ${escapeHtmlV211(x.unit)} = <b>${Number(x.baseQty).toLocaleString('vi-VN')} ${escapeHtmlV211(x.baseUnit)}</b></div><div class="prod-meta">Lô ${escapeHtmlV211(x.lotNumber||'Không số')} · HSD ${escapeHtmlV211(x.expiry||'—')}</div></div><button class="btn btn-sm btn-danger" style="width:auto;" onclick="removeStockTransferItemV31('${x.tempId}')">Xóa</button></div>`).join(''):'<div class="empty-state">Chưa có hàng trong phiếu.</div>';
+}
+async function createStockTransferV31(){
+  if(!requireV3('stock'))return;const btn=document.getElementById('createTransferBtnV31');if(btn.disabled)return;const fromBranchId=currentBranchIdV3,toBranchId=document.getElementById('transferToV31').value,note=document.getElementById('transferNoteV31').value.trim();if(!toBranchId||toBranchId===fromBranchId){alert('Chọn cơ sở nhận khác cơ sở gửi.');return;}if(!stockTransferItemsV31.length){alert('Phiếu chuyển chưa có hàng.');return;}
+  const items=stockTransferItemsV31.map(x=>({...x})),transferRef=storeRef.collection('stockTransfers').doc(),transferNo='CK-'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'-'+Date.now().toString().slice(-6),productIds=[...new Set(items.map(x=>x.productId))],stockRefs=productIds.map(id=>branchStockRefV3(id,fromBranchId)),lotRefs=items.map(x=>storeRef.collection('inventoryLots').doc(x.sourceLotId));btn.disabled=true;btn.textContent='Đang tạo phiếu...';
+  try{
+    await db.runTransaction(async tx=>{
+      const stockDocs=await Promise.all(stockRefs.map(r=>tx.get(r))),lotDocs=await Promise.all(lotRefs.map(r=>tx.get(r))),stockMap={};stockDocs.forEach((d,i)=>stockMap[productIds[i]]=d);const grouped={};items.forEach(x=>grouped[x.productId]=(grouped[x.productId]||0)+Number(x.baseQty||0));
+      for(let i=0;i<items.length;i++){const x=items[i],d=lotDocs[i];if(!d.exists)throw new Error('Lô '+(x.lotNumber||x.sourceLotId)+' không còn tồn tại.');const ld=d.data();if(ld.branchId!==fromBranchId)throw new Error('Lô không thuộc cơ sở gửi.');if(Number(ld.qtyRemaining||0)+0.000001<Number(x.baseQty||0))throw new Error('Lô '+(x.lotNumber||'')+' không còn đủ số lượng.');}
+      for(const pid of productIds){const d=stockMap[pid],st=d&&d.exists?Number(d.data().stock||0):0;if(st+0.000001<Number(grouped[pid]||0))throw new Error('Tồn kho sản phẩm đã thay đổi, không đủ để chuyển.');}
+      const costMap={};productIds.forEach(pid=>{const d=stockMap[pid];costMap[pid]=d&&d.exists?Number(d.data().avgCost??d.data().cost??0):0;});const finalItems=items.map(x=>({...x,unitCost:Number(costMap[x.productId]||0),lineValue:Number(x.baseQty||0)*Number(costMap[x.productId]||0)}));
+      tx.set(transferRef,{transferNo,fromBranchId,toBranchId,fromBranchName:branchNameV3(fromBranchId),toBranchName:branchNameV3(toBranchId),status:'in_transit',items:finalItems.map(({tempId,previewCost,...x})=>x),note,itemCount:finalItems.length,createdByUid:auth.currentUser.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      productIds.forEach(pid=>{const d=stockMap[pid],old=d&&d.exists?d.data():{},oldStock=Number(old.stock||0),avg=Number(old.avgCost??old.cost??0);tx.set(branchStockRefV3(pid,fromBranchId),{branchId:fromBranchId,productId:pid,stock:oldStock-Number(grouped[pid]||0),cost:avg,avgCost:avg,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});});
+      finalItems.forEach((x,i)=>{const ld=lotDocs[i].data();tx.update(lotRefs[i],{qtyRemaining:Number(ld.qtyRemaining||0)-Number(x.baseQty||0),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});tx.set(storeRef.collection('stockLogs').doc(),{branchId:fromBranchId,type:'transfer_out',productId:x.productId,productName:x.productName,qty:-Number(x.baseQty||0),unit:x.baseUnit,cost:Number(x.unitCost||0),lotNumber:x.lotNumber||'',expiry:x.expiry||null,referenceId:transferRef.id,transferNo,toBranchId,createdAt:firebase.firestore.FieldValue.serverTimestamp()});});
+    });
+    stockTransferItemsV31=[];renderStockTransferItemsV31();alert('Đã tạo '+transferNo+'.\nHàng đã xuất khỏi '+branchNameV3(fromBranchId)+' và đang chờ '+branchNameV3(toBranchId)+' xác nhận nhận.');await loadStockTransferHistoryV31();
+  }catch(e){alert('Không tạo được phiếu chuyển: '+e.message);}finally{btn.disabled=false;btn.textContent='🚚 Tạo phiếu & xuất khỏi kho gửi';}
+}
+async function loadStockTransferHistoryV31(){
+  const box=document.getElementById('stockTransferHistoryV31');if(!box||!storeRef)return;box.innerHTML='<div class="empty-state">Đang tải...</div>';try{const [outSnap,inSnap]=await Promise.all([storeRef.collection('stockTransfers').where('fromBranchId','==',currentBranchIdV3).get(),storeRef.collection('stockTransfers').where('toBranchId','==',currentBranchIdV3).get()]),m=new Map();[...outSnap.docs,...inSnap.docs].forEach(d=>m.set(d.id,{id:d.id,...d.data()}));const rows=[...m.values()].sort((a,b)=>tsMillisV3(b.createdAt)-tsMillisV3(a.createdAt));renderStockTransferHistoryV31(rows);}catch(e){box.innerHTML='<div class="card-tight card v3-danger">Không tải được phiếu chuyển: '+escapeHtmlV211(e.message)+'</div>';}
+}
+function renderStockTransferHistoryV31(rows){
+  const box=document.getElementById('stockTransferHistoryV31');if(!box)return;box.innerHTML=rows.length?rows.map(t=>{const incoming=t.toBranchId===currentBranchIdV3,items=(t.items||[]),canReceive=incoming&&t.status==='in_transit'&&canV3('stock'),canCancel=!incoming&&t.fromBranchId===currentBranchIdV3&&t.status==='in_transit'&&canV3('stock');return `<div class="card" style="margin-bottom:8px;padding:11px;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;"><div><div class="prod-name">${incoming?'📥 Phiếu đến':'📤 Phiếu đi'} · ${escapeHtmlV211(t.transferNo||t.id)}</div><div class="prod-meta">${escapeHtmlV211(t.fromBranchName||branchNameV3(t.fromBranchId))} → ${escapeHtmlV211(t.toBranchName||branchNameV3(t.toBranchId))} · ${transferStatusNameV31(t.status)}</div></div></div><div style="margin-top:7px;">${items.map(x=>`<div class="prod-meta">• ${escapeHtmlV211(x.productName)}: <b>${Number(x.baseQty||0).toLocaleString('vi-VN')} ${escapeHtmlV211(x.baseUnit||'ĐV')}</b> · Lô ${escapeHtmlV211(x.lotNumber||'Không số')}${x.expiry?' · HSD '+escapeHtmlV211(x.expiry):''}</div>`).join('')}</div>${t.note?`<div class="prod-meta" style="margin-top:5px;">Ghi chú: ${escapeHtmlV211(t.note)}</div>`:''}<div style="display:flex;gap:7px;margin-top:9px;flex-wrap:wrap;">${canReceive?`<button class="btn btn-sm btn-leaf" style="width:auto;" onclick="receiveStockTransferV31('${t.id}')">✅ Xác nhận đã nhận</button>`:''}${canCancel?`<button class="btn btn-sm btn-danger" style="width:auto;" onclick="cancelStockTransferV31('${t.id}')">↩️ Hủy phiếu</button>`:''}</div></div>`;}).join(''):'<div class="empty-state">Chưa có phiếu chuyển liên quan cơ sở này.</div>';
+}
+async function receiveStockTransferV31(id){
+  if(!requireV3('stock'))return;if(!confirm('Xác nhận cơ sở đã nhận đủ hàng theo phiếu? Sau bước này hàng sẽ được cộng vào kho nhận.'))return;const ref=storeRef.collection('stockTransfers').doc(id);
+  try{await db.runTransaction(async tx=>{const d=await tx.get(ref);if(!d.exists)throw new Error('Phiếu không tồn tại.');const t=d.data();if(t.status!=='in_transit')throw new Error('Phiếu không còn ở trạng thái Đang chuyển.');if(t.toBranchId!==currentBranchIdV3)throw new Error('Bạn phải đăng nhập/chuyển sang đúng cơ sở nhận.');const items=Array.isArray(t.items)?t.items:[],grouped={};items.forEach(x=>{if(!grouped[x.productId])grouped[x.productId]={qty:0,value:0};grouped[x.productId].qty+=Number(x.baseQty||0);grouped[x.productId].value+=Number(x.baseQty||0)*Number(x.unitCost||0);});const pids=Object.keys(grouped),stockRefs=pids.map(pid=>branchStockRefV3(pid,t.toBranchId)),docs=await Promise.all(stockRefs.map(r=>tx.get(r)));
+    docs.forEach((sd,i)=>{const old=sd.exists?sd.data():{},g=grouped[pids[i]],oldStock=Number(old.stock||0),oldCost=Number(old.avgCost??old.cost??0),newStock=oldStock+g.qty,newAvg=newStock>0?((oldStock*oldCost)+g.value)/newStock:0;tx.set(stockRefs[i],{branchId:t.toBranchId,productId:pids[i],stock:newStock,cost:newAvg,avgCost:newAvg,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});});
+    items.forEach((x,i)=>{const lotRef=storeRef.collection('inventoryLots').doc(id+'__IN__'+String(i+1).padStart(3,'0'));tx.set(lotRef,{branchId:t.toBranchId,productId:x.productId,productName:x.productName,lotNumber:x.lotNumber||'',expiry:x.expiry||null,qtyInitial:Number(x.baseQty||0),qtyRemaining:Number(x.baseQty||0),baseUnit:x.baseUnit||'',unitCost:Number(x.unitCost||0),supplierId:x.sourceSupplierId||null,supplierName:x.sourceSupplierName||'',source:'stock_transfer_v31',stockTransferId:id,transferNo:t.transferNo||'',sourceLotId:x.sourceLotId||null,sourceBranchId:t.fromBranchId,originPurchaseReceiptId:x.originPurchaseReceiptId||null,createdAt:firebase.firestore.FieldValue.serverTimestamp()});tx.set(storeRef.collection('stockLogs').doc(),{branchId:t.toBranchId,type:'transfer_in',productId:x.productId,productName:x.productName,qty:Number(x.baseQty||0),unit:x.baseUnit||'',cost:Number(x.unitCost||0),lotNumber:x.lotNumber||'',expiry:x.expiry||null,referenceId:id,transferNo:t.transferNo||'',fromBranchId:t.fromBranchId,createdAt:firebase.firestore.FieldValue.serverTimestamp()});});
+    tx.update(ref,{status:'received',receivedAt:firebase.firestore.FieldValue.serverTimestamp(),receivedByUid:auth.currentUser.uid,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  });alert('✅ Đã nhận hàng. Tồn kho '+branchNameV3(currentBranchIdV3)+' đã được cập nhật.');await loadStockTransferHistoryV31();}catch(e){alert('Không thể nhận phiếu: '+e.message);}
+}
+async function cancelStockTransferV31(id){
+  if(!requireV3('stock'))return;if(!confirm('Hủy phiếu đang chuyển? Hàng sẽ được trả lại kho và đúng lô của cơ sở gửi.'))return;const ref=storeRef.collection('stockTransfers').doc(id);
+  try{await db.runTransaction(async tx=>{const d=await tx.get(ref);if(!d.exists)throw new Error('Phiếu không tồn tại.');const t=d.data();if(t.status!=='in_transit')throw new Error('Chỉ hủy được phiếu đang chuyển.');if(t.fromBranchId!==currentBranchIdV3)throw new Error('Bạn phải ở đúng cơ sở gửi để hủy.');const items=Array.isArray(t.items)?t.items:[],pids=[...new Set(items.map(x=>x.productId))],stockRefs=pids.map(pid=>branchStockRefV3(pid,t.fromBranchId)),lotRefs=items.map(x=>storeRef.collection('inventoryLots').doc(x.sourceLotId)),stockDocs=await Promise.all(stockRefs.map(r=>tx.get(r))),lotDocs=await Promise.all(lotRefs.map(r=>tx.get(r))),grouped={};items.forEach(x=>{if(!grouped[x.productId])grouped[x.productId]={qty:0,value:0};grouped[x.productId].qty+=Number(x.baseQty||0);grouped[x.productId].value+=Number(x.baseQty||0)*Number(x.unitCost||0);});for(let i=0;i<lotDocs.length;i++)if(!lotDocs[i].exists)throw new Error('Không tìm thấy lô gốc để hoàn hàng.');
+    stockDocs.forEach((sd,i)=>{const old=sd.exists?sd.data():{},g=grouped[pids[i]],oldStock=Number(old.stock||0),oldCost=Number(old.avgCost??old.cost??0),newStock=oldStock+g.qty,newAvg=newStock>0?((oldStock*oldCost)+g.value)/newStock:0;tx.set(stockRefs[i],{branchId:t.fromBranchId,productId:pids[i],stock:newStock,cost:newAvg,avgCost:newAvg,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});});
+    items.forEach((x,i)=>{const ld=lotDocs[i].data();tx.update(lotRefs[i],{qtyRemaining:Number(ld.qtyRemaining||0)+Number(x.baseQty||0),updatedAt:firebase.firestore.FieldValue.serverTimestamp()});tx.set(storeRef.collection('stockLogs').doc(),{branchId:t.fromBranchId,type:'transfer_cancel',productId:x.productId,productName:x.productName,qty:Number(x.baseQty||0),unit:x.baseUnit||'',cost:Number(x.unitCost||0),lotNumber:x.lotNumber||'',expiry:x.expiry||null,referenceId:id,transferNo:t.transferNo||'',createdAt:firebase.firestore.FieldValue.serverTimestamp()});});tx.update(ref,{status:'cancelled',cancelledAt:firebase.firestore.FieldValue.serverTimestamp(),cancelledByUid:auth.currentUser.uid,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  });alert('Đã hủy phiếu và hoàn hàng về kho gửi.');await loadStockTransferHistoryV31();}catch(e){alert('Không thể hủy phiếu: '+e.message);}
+}
 
 // ---------- Tổng quan hệ thống ----------
 async function openSystemDashboardV3(){if(currentUserRoleV3!=='owner'){alert('Chỉ Chủ hệ thống được xem tổng quan toàn chuỗi.');return;}openModal('systemDashboardModal');const box=document.getElementById('systemDashboardContentV3');box.innerHTML='<div class="empty-state">Đang tổng hợp dữ liệu toàn hệ thống...</div>';try{await loadBranchesV3();const now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),1);const [stocksSnap,salesSnap,debtSnap]=await Promise.all([storeRef.collection('branchStocks').get(),storeRef.collection('sales').where('createdAt','>=',start).get(),storeRef.collection('debtLedger').get()]);const stocks=stocksSnap.docs.map(d=>d.data()),monthSales=salesSnap.docs.map(d=>d.data()),debts=debtSnap.docs.map(d=>d.data());let totalRev=0,totalGross=0,totalStock=0,totalDebt=0;const cards=branchesV3.map(b=>{const ss=monthSales.filter(x=>x.branchId===b.id),rev=ss.reduce((s,x)=>s+Number(x.total||0),0),gross=ss.reduce((s,x)=>s+(x.items||[]).reduce((a,it)=>a+(Number(it.price||0)-Number(it.cost||0))*Number(it.qty||0),0),0),sv=stocks.filter(x=>x.branchId===b.id).reduce((s,x)=>s+Number(x.stock||0)*Number(x.avgCost??x.cost??0),0),debt=debts.filter(x=>x.branchId===b.id).reduce((s,x)=>s+Number(x.debit||0)-Number(x.credit||0),0);totalRev+=rev;totalGross+=gross;totalStock+=sv;totalDebt+=debt;return `<div class="v3-branch-card" onclick="closeModal('systemDashboardModal');switchBranchV3('${b.id}')"><div class="prod-name">🏢 ${escapeHtmlV211(b.code||b.id)} · ${escapeHtmlV211(b.name)}</div><div class="prod-meta" style="margin-top:6px;">Doanh thu tháng: <b>${money(rev)}</b></div><div class="prod-meta">Lãi gộp: <b>${money(gross)}</b></div><div class="prod-meta">Giá trị tồn: <b>${money(sv)}</b></div><div class="prod-meta">Khách nợ: <b>${money(Math.max(0,debt))}</b></div></div>`;}).join('');box.innerHTML=`<div class="stat-row" style="margin-bottom:12px;"><div class="stat wheat"><div class="label">Doanh thu hệ thống</div><div class="value mono">${money(totalRev)}</div></div><div class="stat leaf"><div class="label">Lãi gộp hệ thống</div><div class="value mono">${money(totalGross)}</div></div></div><div class="stat-row" style="margin-bottom:12px;"><div class="stat wheat"><div class="label">Giá trị tồn</div><div class="value mono">${money(totalStock)}</div></div><div class="stat rust"><div class="label">Khách nợ</div><div class="value mono">${money(Math.max(0,totalDebt))}</div></div></div><div class="section-title">Các cơ sở</div><div class="v3-grid">${cards}</div><button class="btn btn-ghost" onclick="closeModal('systemDashboardModal');openBranchManagerV3()" style="margin-top:12px;">⚙️ Quản lý cơ sở</button>`;}catch(e){box.innerHTML='<div class="card-tight card v3-danger">Không tổng hợp được: '+escapeHtmlV211(e.message)+'</div>';}}
