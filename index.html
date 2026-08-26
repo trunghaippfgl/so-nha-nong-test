@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Sổ Nhà Nông V2.1.1</title>
+<title>Sổ Nhà Nông V3.1.1</title>
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="manifest" href="manifest.json">
@@ -239,7 +239,7 @@
     #invoiceArea{ display:block !important; position:absolute; top:0; left:0; width:100%; }
   }
 
-/* ===== V3.1 MULTI-BRANCH + STOCK TRANSFER ===== */
+/* ===== V3.1.1 MULTI-BRANCH + STOCK TRANSFER BADGE ===== */
 .branch-toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .branch-toolbar select{min-width:145px;padding:7px 9px;font-size:12px;margin:0}
 .branch-chip{font-size:11px;padding:5px 8px;border:1px solid var(--line);border-radius:999px;color:var(--cream-300);background:var(--soil-900)}
@@ -297,7 +297,7 @@
 <div id="app">
   <div class="topbar">
     <div>
-      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V3.1</span></div>
+      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V3.1.1</span></div>
       <div class="sub" id="storeGreeting">Xin chào</div>
       <div class="branch-toolbar" id="branchToolbar" style="display:none;">
         <select id="branchSwitcher" onchange="switchBranchV3(this.value)"></select>
@@ -367,7 +367,7 @@
       <button class="btn btn-ghost" style="flex:1; min-width:125px;" onclick="document.getElementById('excelImportInput').click()">📥 Nhập Excel</button>
       <button class="btn btn-leaf" style="flex:1; min-width:150px;" onclick="openBulkStockIn()">📋 Phiếu nhập nhiều SP</button>
       <button class="btn btn-ghost" style="flex:1; min-width:125px;" onclick="openStocktake()">🧮 Kiểm kê kho</button>
-      <button class="btn btn-ghost" style="flex:1; min-width:145px;" onclick="openStockTransferV31()">🚚 Chuyển kho</button>
+      <button class="btn btn-ghost" style="flex:1; min-width:145px; display:flex; align-items:center; justify-content:center; gap:6px;" onclick="openStockTransferV31()">🚚 Chuyển kho <span id="transferPendingBadgeV311" style="display:none;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#c43d2f;color:#fff;font-size:12px;font-weight:800;line-height:20px;text-align:center;">0</span></button>
       <input type="file" id="excelImportInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelImport(event)">
     </div>
     <div class="card" id="stockList"></div>
@@ -1445,6 +1445,7 @@ async function startStoreListenersV21(){
   listenExpensesV22();
   listenProfitSettingsV22();
   listenDebtLedgersV3();
+  listenStockTransferPendingV311();
   applyRoleUiV3();
 }
 function hideAllGateScreensV21(){
@@ -2865,6 +2866,29 @@ async function loadStaffListV3(){const box=document.getElementById('staffListV3'
 function openCreateStaffV3(){if(!requireV3('staff'))return;document.getElementById('staffNameV3').value='';document.getElementById('staffUsernameV3').value='';document.getElementById('staffPasswordV3').value='';document.getElementById('staffBranchV3').innerHTML=branchesV3.map(b=>`<option value="${b.id}">${escapeHtmlV211(b.code||b.id)} · ${escapeHtmlV211(b.name)}</option>`).join('');openModal('createStaffModalV3');}
 async function createStaffV3(){if(!requireV3('staff'))return;const name=document.getElementById('staffNameV3').value.trim(),username=document.getElementById('staffUsernameV3').value.trim(),password=document.getElementById('staffPasswordV3').value,branchId=document.getElementById('staffBranchV3').value,role=document.getElementById('staffRoleV3').value,btn=document.getElementById('createStaffBtnV3');if(!name||!username||!branchId||!role){alert('Điền đủ thông tin.');return;}if(password.length<6){alert('Mật khẩu tối thiểu 6 ký tự.');return;}const email=slugify(username)+'@so-nha-nong.local';btn.disabled=true;btn.textContent='Đang tạo...';let secondary=null;try{try{secondary=firebase.app('StaffCreatorV3');}catch(_){secondary=firebase.initializeApp(firebaseConfig,'StaffCreatorV3');}const cred=await secondary.auth().createUserWithEmailAndPassword(email,password),uid=cred.user.uid;await secondary.auth().signOut();const batch=db.batch();batch.set(storeRef.collection('members').doc(uid),{uid,name,username,role,branchId,active:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()});batch.set(db.collection('userAccess').doc(uid),{organizationId:organizationIdV3,role,branchId,active:true,username,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});await batch.commit();closeModal('createStaffModalV3');await loadStaffListV3();alert('Đã tạo tài khoản.\nMã đăng nhập: '+username+'\nCơ sở: '+branchNameV3(branchId)+'\nVai trò: '+roleNameV3(role));}catch(e){alert('Không tạo được nhân viên: '+e.message+'\nNếu báo permission-denied, hãy cập nhật Firestore Rules V3.');}finally{btn.disabled=false;btn.textContent='Tạo tài khoản';}}
 async function toggleStaffV3(uid,enable){if(!requireV3('staff'))return;if(!confirm((enable?'Mở lại':'Khóa')+' tài khoản này?'))return;const member=await storeRef.collection('members').doc(uid).get();if(!member.exists)return;const data=member.data();const batch=db.batch();batch.update(storeRef.collection('members').doc(uid),{active:enable,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});batch.set(db.collection('userAccess').doc(uid),{organizationId:organizationIdV3,role:data.role,branchId:data.branchId,active:enable,username:data.username||'',updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});await batch.commit();await loadStaffListV3();}
+
+// ---------- V3.1.1: Cảnh báo phiếu chuyển đang chờ nhận ----------
+function updateStockTransferPendingBadgeV311(count){
+  const el=document.getElementById('transferPendingBadgeV311');
+  if(!el)return;
+  const n=Math.max(0,Number(count||0));
+  el.textContent=n>99?'99+':String(n);
+  el.style.display=n>0?'inline-block':'none';
+  el.title=n>0?(n+' phiếu chuyển đang chờ cơ sở này nhận'):'';
+}
+function listenStockTransferPendingV311(){
+  updateStockTransferPendingBadgeV311(0);
+  if(!storeRef||!canV3('stock'))return;
+  const q=storeRef.collection('stockTransfers').where('toBranchId','==',currentBranchIdV3);
+  subV3(q,snap=>{
+    let count=0;
+    snap.docs.forEach(d=>{if((d.data()||{}).status==='in_transit')count++;});
+    updateStockTransferPendingBadgeV311(count);
+  },e=>{
+    console.warn('V3.1.1 transfer badge:',e);
+    updateStockTransferPendingBadgeV311(0);
+  });
+}
 
 // ---------- V3.1: Chuyển kho giữa các cơ sở ----------
 function transferStatusNameV31(status){return ({in_transit:'🚚 Đang chuyển',received:'✅ Đã nhận',cancelled:'↩️ Đã hủy'})[status]||status||'—';}
