@@ -158,6 +158,7 @@
     display:inline-block; margin-top:3px;
   }
   .badge-low{ background:var(--rust-dim); color:var(--rust-500); }
+  .badge-out{ background:var(--rust-500); color:#fff; }
   .badge-exp{ background:var(--wheat-dim); color:var(--wheat-400); }
   .badge-expired{ background:var(--rust-500); color:#fff; }
 
@@ -2029,7 +2030,13 @@ function closeModal(id){ document.getElementById(id).classList.remove('show'); }
 function openModal(id){ document.getElementById(id).classList.add('show'); }
 
 // ---------- KHO HÀNG ----------
-function isLowStock(p){ return availableBaseStock(p) <= (p.lowThreshold || 5); }
+function isOutOfStock(p){ return Number(p.stock||0) <= 0; }
+function isLowStock(p){
+  const physicalStock=Number(p.stock||0);
+  const available=Number(availableBaseStock(p)||0);
+  const threshold=Number(p.lowThreshold || 5);
+  return physicalStock > 0 && available > 0 && available <= threshold;
+}
 function isExpired(p){
   const lots = lotsForProduct(p.id).filter(l => l.expiry && Number(l.qtyRemaining||0) > 0);
   return lots.some(l => lotDaysToExpiry(l) < 0);
@@ -2061,7 +2068,7 @@ function renderStockList(){
         <div class="prod-name">${p.name}</div>
         <div class="prod-meta">${p.category} · ${money(p.price)}/${p.unit} · GV BQ: ${money(p.cost||0)}/${p.unit}</div>
         ${nearestExpiryLot(p.id) ? `<div class="prod-meta">Lô gần nhất: ${nearestExpiryLot(p.id).lotNumber || 'Không mã'} · HSD ${nearestExpiryLot(p.id).expiry || '—'}</div>` : ''}
-        ${isLowStock(p) ? '<span class="badge badge-low">Sắp hết hàng</span>' : ''}
+        ${isOutOfStock(p) ? '<span class="badge badge-out">⛔ Hết hàng</span>' : (isLowStock(p) ? '<span class="badge badge-low">Sắp hết hàng</span>' : '')}
         ${isExpired(p) ? '<span class="badge badge-expired">⚠️ Có lô hết hạn</span>' : (isExpiringSoon(p) ? '<span class="badge badge-exp">Có lô sắp hết hạn</span>' : '')}
       </div>
       <div class="prod-stock">
@@ -2867,6 +2874,7 @@ function openStocktakeDetail(id){
 // ---------- BÁO CÁO ----------
 function renderStockAlerts(){
   const box = document.getElementById('stockAlertBox');
+  const outOfStock = products.filter(isOutOfStock);
   const lowStock = products.filter(isLowStock);
   const activeLots = inventoryLots.filter(l => Number(l.qtyRemaining||0) > 0 && l.expiry);
   const expiredLots = activeLots.filter(l => lotDaysToExpiry(l) < 0);
@@ -2874,7 +2882,7 @@ function renderStockAlerts(){
   const legacyExpired = []; // V3: HSD theo lô của từng cơ sở
   const legacyExpiring = []; // V3: không dùng HSD legacy chung giữa các cơ sở
 
-  if (!lowStock.length && !expiredLots.length && !expiringLots.length && !legacyExpired.length && !legacyExpiring.length){
+  if (!outOfStock.length && !lowStock.length && !expiredLots.length && !expiringLots.length && !legacyExpired.length && !legacyExpiring.length){
     box.innerHTML = '<div class="empty-state" style="padding:20px;">✅ Kho hàng ổn định, không có cảnh báo.</div>';
     return;
   }
@@ -2888,6 +2896,10 @@ function renderStockAlerts(){
     html += `<div style="font-size:12px;color:var(--wheat-400);font-weight:600;margin:10px 0 6px;">⏳ Sắp hết hạn trong 30 ngày (${expiringLots.length + legacyExpiring.length})</div>`;
     html += expiringLots.map(l=>`<div class="prod-item"><div style="flex:1;"><div class="prod-name">${l.productName}</div><div class="prod-meta">Lô ${l.lotNumber||'Không mã'} · Còn ${Number(l.qtyRemaining||0).toLocaleString('vi-VN')} ${l.baseUnit||''}</div></div><div class="prod-meta">HSD: ${l.expiry}</div></div>`).join('');
     html += legacyExpiring.map(p=>`<div class="prod-item"><div style="flex:1;">${p.name}<div class="prod-meta">Dữ liệu HSD cũ</div></div><div class="prod-meta">HSD: ${p.expiry}</div></div>`).join('');
+  }
+  if(outOfStock.length){
+    html += `<div style="font-size:12px;color:var(--rust-500);font-weight:700;margin:10px 0 6px;">⛔ Hết hàng (${outOfStock.length})</div>`;
+    html += outOfStock.map(p=>`<div class="prod-item"><div style="flex:1;"><div class="prod-name">${p.name}</div><div class="prod-meta">Tồn kho: 0 ${p.unit}</div></div><span class="badge badge-out">Hết hàng</span></div>`).join('');
   }
   if(lowStock.length){
     html += `<div style="font-size:12px;color:var(--rust-500);font-weight:600;margin:10px 0 6px;">📉 Sắp hết hàng (${lowStock.length})</div>`;
