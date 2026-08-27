@@ -500,9 +500,14 @@ input:focus,select:focus,textarea:focus{
     </div>
 
     <div id="debtSupplierSection" style="display:none;">
+      <div style="display:flex; gap:8px; margin-bottom:10px; align-items:center; flex-wrap:wrap;">
+        <button class="btn btn-primary" style="flex:1; min-width:170px;" onclick="openAddSupplier()">+ Thêm nhà cung cấp mới</button>
+      </div>
+      <div class="search-box" style="margin-bottom:12px;">
+        <input id="debtSupplierSearch" placeholder="🔎 Tìm nhà cung cấp theo tên hoặc SĐT..." oninput="renderSupplierList()">
+      </div>
       <div class="section-title">Danh sách nhà cung cấp</div>
       <div class="card" id="supplierList"></div>
-      <button class="btn btn-ghost" style="margin-top:10px;" onclick="openAddSupplier()">+ Thêm nhà cung cấp mới</button>
     </div>
   </div>
   <!-- ---- TAB: BÁO CÁO ---- -->
@@ -2636,7 +2641,17 @@ function renderSupplierList(){
     box.innerHTML = '<div class="empty-state"><div class="ic">🚚</div>Chưa có nhà cung cấp nào.</div>';
     return;
   }
-  box.innerHTML = suppliers.map(s => `
+  const searchEl = document.getElementById('debtSupplierSearch');
+  const q = String(searchEl?.value || '').trim().toLowerCase();
+  const rows = !q ? suppliers : suppliers.filter(s =>
+    String(s.name || '').toLowerCase().includes(q) ||
+    String(s.phone || '').toLowerCase().includes(q)
+  );
+  if (!rows.length){
+    box.innerHTML = '<div class="empty-state"><div class="ic">🔎</div>Không tìm thấy nhà cung cấp phù hợp.</div>';
+    return;
+  }
+  box.innerHTML = rows.map(s => `
     <div class="prod-item" style="align-items:flex-start;">
       <div class="prod-ic">🚚</div>
       <div style="flex:1;">
