@@ -1,0 +1,27 @@
+{
+  "name": "Sổ Nhà Nông",
+  "short_name": "Sổ Nhà Nông",
+  "description": "Quản lý bán hàng, kho, công nợ và nhiều cơ sở cho đại lý vật tư nông nghiệp.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F4F7EA",
+  "theme_color": "#F4F7EA",
+  "lang": "vi-VN",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "id": "./"
+}
