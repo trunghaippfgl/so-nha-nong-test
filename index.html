@@ -489,9 +489,14 @@ input:focus,select:focus,textarea:focus{
     </div>
 
     <div id="debtCustomerSection">
+      <div style="display:flex; gap:8px; margin-bottom:10px; align-items:center; flex-wrap:wrap;">
+        <button class="btn btn-primary" style="flex:1; min-width:170px;" onclick="openAddCustomer()">+ Thêm khách hàng mới</button>
+      </div>
+      <div class="search-box" style="margin-bottom:12px;">
+        <input id="debtCustomerSearch" placeholder="🔎 Tìm khách hàng theo tên hoặc SĐT..." oninput="renderDebtList()">
+      </div>
       <div class="section-title">Danh sách khách nợ</div>
       <div class="card" id="debtList"></div>
-      <button class="btn btn-ghost" style="margin-top:10px;" onclick="openAddCustomer()">+ Thêm khách hàng mới</button>
     </div>
 
     <div id="debtSupplierSection" style="display:none;">
@@ -2481,7 +2486,17 @@ function renderDebtList(){
     box.innerHTML = '<div class="empty-state"><div class="ic">📒</div>Chưa có khách hàng nào.</div>';
     return;
   }
-  box.innerHTML = customers.map(c => `
+  const searchEl = document.getElementById('debtCustomerSearch');
+  const q = String(searchEl?.value || '').trim().toLowerCase();
+  const rows = !q ? customers : customers.filter(c =>
+    String(c.name || '').toLowerCase().includes(q) ||
+    String(c.phone || '').toLowerCase().includes(q)
+  );
+  if (!rows.length){
+    box.innerHTML = '<div class="empty-state"><div class="ic">🔎</div>Không tìm thấy khách hàng phù hợp.</div>';
+    return;
+  }
+  box.innerHTML = rows.map(c => `
     <div class="prod-item" style="align-items:flex-start;">
       <div class="prod-ic">👤</div>
       <div style="flex:1;">
