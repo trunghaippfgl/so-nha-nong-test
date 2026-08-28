@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Sổ Nhà Nông V3.1.1</title>
+<title>Sổ Nhà Nông V3.2.7</title>
 <link rel="shortcut icon" href="favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
@@ -430,7 +430,7 @@ input:focus,select:focus,textarea:focus{
 <div id="app">
   <div class="topbar">
     <div>
-      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V3.2.6</span></div>
+      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V3.2.7</span></div>
       <div class="sub" id="storeGreeting">Xin chào</div>
       <div class="branch-toolbar" id="branchToolbar" style="display:none;">
         <select id="branchSwitcher" onchange="switchBranchV3(this.value)"></select>
@@ -542,11 +542,11 @@ input:focus,select:focus,textarea:focus{
       <div class="card" id="supplierList"></div>
     </div>
   </div>
-  <!-- ---- TAB: KẾ TOÁN & CHỨNG TỪ V3.2.2 ---- -->
+  <!-- ---- TAB: KẾ TOÁN & CHỨNG TỪ V3.2.7 ---- -->
   <div class="screen" id="screen-ke-toan">
     <div class="section-title" style="margin-top:0;">📒 Kế toán & Chứng từ</div>
     <div class="card-tight card" style="font-size:12px;line-height:1.55;margin-bottom:12px;">
-      Số liệu của <b id="accountingBranchNameV321">cơ sở hiện tại</b>. V3.2.2 bổ sung <b>mã chứng từ, liên kết giao dịch gốc, nhật ký thao tác và khóa sổ theo tháng</b>. Giao dịch chưa có hình thức thanh toán vẫn nằm ở <b>Chưa phân loại</b> để không tự suy đoán sai.
+      Số liệu của <b id="accountingBranchNameV321">cơ sở hiện tại</b>. V3.2.7 bổ sung <b>hóa đơn đầu vào NCC, file PDF/XML/ảnh, liên kết phiếu nhập và đối chiếu chênh lệch</b>. Giao dịch chưa có hình thức thanh toán vẫn nằm ở <b>Chưa phân loại</b> để không tự suy đoán sai.
     </div>
     <div class="stat-row" style="margin-bottom:10px;">
       <div class="stat leaf"><div class="label">💵 Tiền mặt</div><div class="value mono" id="accCashBalanceV321">0đ</div></div>
@@ -588,6 +588,15 @@ input:focus,select:focus,textarea:focus{
 
     <div class="section-title">🔎 Đối chiếu chứng từ</div>
     <div class="card-tight card" id="accountingReconcileV322" style="font-size:12px;line-height:1.65;margin-bottom:14px;"><div class="empty-state">Đang kiểm tra...</div></div>
+
+    <div class="section-title">📎 Hóa đơn đầu vào NCC</div>
+    <div class="card-tight card" id="purchaseInvoiceSummaryV327" style="font-size:12px;line-height:1.65;margin-bottom:10px;"><div class="empty-state">Đang kiểm tra hóa đơn đầu vào...</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <button class="btn btn-primary" style="flex:1;min-width:165px;" onclick="openPurchaseInvoiceModalV327()">+ Lưu hóa đơn đầu vào</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:150px;" onclick="renderPurchaseInvoicesV327()">🔄 Làm mới đối chiếu</button>
+    </div>
+    <div class="search-box" style="margin-bottom:10px;"><input id="purchaseInvoiceSearchV327" placeholder="🔎 Tìm số HĐ, NCC, MST..." oninput="renderPurchaseInvoicesV327()"></div>
+    <div class="card" id="purchaseInvoiceListV327" style="max-height:360px;overflow-y:auto;margin-bottom:14px;"><div class="empty-state">Chưa có hóa đơn đầu vào.</div></div>
 
     <div class="section-title">🧾 Chứng từ kế toán</div>
     <div class="card" id="accountingDocumentsV322" style="max-height:330px;overflow-y:auto;margin-bottom:14px;"><div class="empty-state">Chưa có chứng từ.</div></div>
@@ -862,6 +871,7 @@ input:focus,select:focus,textarea:focus{
     <input id="stockInPaid" type="number" min="0" inputmode="decimal" placeholder="0" oninput="updateStockInPreview()">
     <label>Hình thức thanh toán phần đã trả</label>
     <select id="stockInPaymentMethod"><option value="cash">💵 Tiền mặt</option><option value="bank">🏦 Chuyển khoản</option></select>
+    <label id="stockInInvoiceQuickWrapV327" style="display:none;margin-top:10px;align-items:center;gap:8px;"><input id="stockInHasInvoiceV327" type="checkbox" style="width:auto;margin:0;"> 📎 Có hóa đơn đầu vào — nhập thông tin ngay sau khi lưu phiếu</label>
     <div class="card-tight card" style="margin-top:12px; line-height:1.7;">
       <div>Quy đổi vào kho: <b id="stockInBaseQtyPreview">0</b></div>
       <div>Tổng tiền nhập: <b class="mono" id="stockInTotalPreview">0đ</b></div>
@@ -899,6 +909,7 @@ input:focus,select:focus,textarea:focus{
     <div class="card" id="bulkStockInItems"><div class="empty-state" style="padding:18px;">Chưa có sản phẩm trong phiếu nhập.</div></div>
     <label>Đã thanh toán cho NCC</label><input id="bulkStockInPaid" type="number" min="0" inputmode="decimal" placeholder="0" oninput="updateBulkStockInSummary()">
     <label>Hình thức thanh toán phần đã trả</label><select id="bulkStockInPaymentMethod"><option value="cash">💵 Tiền mặt</option><option value="bank">🏦 Chuyển khoản</option></select>
+    <label id="bulkStockInInvoiceQuickWrapV327" style="display:none;margin-top:10px;align-items:center;gap:8px;"><input id="bulkStockInHasInvoiceV327" type="checkbox" style="width:auto;margin:0;"> 📎 Có hóa đơn đầu vào — nhập thông tin ngay sau khi lưu phiếu</label>
     <label>Ghi chú phiếu nhập</label><textarea id="bulkStockInNote" rows="2" placeholder="VD: Hóa đơn số 125, giao hàng đợt tháng 8..."></textarea>
     <div class="card-tight card" style="margin-top:12px; line-height:1.8;">
       <div>Tổng tiền hàng: <b class="mono" id="bulkStockInTotal" style="float:right;">0đ</b></div>
@@ -1414,9 +1425,55 @@ input:focus,select:focus,textarea:focus{
   </div>
 </div>
 
+<!-- ============ V3.2.7: HÓA ĐƠN ĐẦU VÀO NCC ============ -->
+<div class="overlay" id="purchaseInvoiceModalV327">
+  <div class="sheet" style="max-height:92vh;overflow-y:auto;">
+    <button class="sheet-close" onclick="closeModal('purchaseInvoiceModalV327')">✕</button>
+    <h3>📎 Lưu hóa đơn đầu vào NCC</h3>
+    <div class="card-tight card" style="font-size:12px;line-height:1.55;margin-bottom:10px;">
+      Liên kết hóa đơn với phiếu nhập để sau này đối chiếu được <b>NCC → Hóa đơn → Phiếu nhập → Công nợ/Thanh toán</b>. File gốc được lưu trên Firebase Storage.
+    </div>
+    <label>Phiếu nhập liên quan</label>
+    <select id="purchaseInvoiceReceiptV327" onchange="onPurchaseInvoiceReceiptChangeV327()"><option value="">-- Chưa liên kết phiếu nhập --</option></select>
+    <label>Nhà cung cấp *</label>
+    <select id="purchaseInvoiceSupplierV327"><option value="">-- Chọn NCC --</option></select>
+    <div class="row">
+      <div><label>Số hóa đơn *</label><input id="purchaseInvoiceNoV327" placeholder="VD: 00001234"></div>
+      <div><label>Ký hiệu</label><input id="purchaseInvoiceSerialV327" placeholder="VD: 1C26TAA"></div>
+    </div>
+    <div class="row">
+      <div><label>Ngày hóa đơn *</label><input id="purchaseInvoiceDateV327" type="date"></div>
+      <div><label>MST người bán</label><input id="purchaseInvoiceTaxCodeV327" inputmode="numeric" placeholder="Mã số thuế NCC"></div>
+    </div>
+    <div class="row">
+      <div><label>Tiền trước thuế</label><input id="purchaseInvoicePretaxV327" type="number" min="0" inputmode="numeric" placeholder="0" oninput="updatePurchaseInvoiceTotalV327()"></div>
+      <div><label>Tiền VAT</label><input id="purchaseInvoiceVatV327" type="number" min="0" inputmode="numeric" placeholder="0" oninput="updatePurchaseInvoiceTotalV327()"></div>
+    </div>
+    <label>Tổng thanh toán *</label>
+    <input id="purchaseInvoiceTotalV327" type="number" min="0" inputmode="numeric" placeholder="0" oninput="updatePurchaseInvoiceCompareV327()">
+    <label>Hình thức thanh toán</label>
+    <select id="purchaseInvoicePaymentMethodV327"><option value="unclassified">❔ Chưa phân loại</option><option value="cash">💵 Tiền mặt</option><option value="bank">🏦 Chuyển khoản</option></select>
+    <div class="card-tight card" id="purchaseInvoiceCompareV327" style="font-size:12px;line-height:1.55;margin-top:8px;">Chọn phiếu nhập để đối chiếu số tiền.</div>
+    <label>File hóa đơn (PDF / XML / ảnh, tối đa 3 file × 10MB)</label>
+    <input id="purchaseInvoiceFilesV327" type="file" multiple accept=".pdf,.xml,text/xml,application/xml,image/*">
+    <div class="prod-meta" style="margin-top:4px;">Ưu tiên lưu <b>XML + PDF</b> hóa đơn điện tử. Ảnh chụp chỉ dùng bổ sung.</div>
+    <label>Ghi chú</label><textarea id="purchaseInvoiceNoteV327" rows="2" placeholder="VD: Hàng giao đủ, đã đối chiếu với PN..."></textarea>
+    <button class="btn btn-primary" id="savePurchaseInvoiceBtnV327" onclick="savePurchaseInvoiceV327()" style="margin-top:12px;">✅ Lưu hóa đơn & liên kết</button>
+  </div>
+</div>
+
+<div class="overlay" id="purchaseInvoiceDetailModalV327">
+  <div class="sheet" style="max-height:92vh;overflow-y:auto;">
+    <button class="sheet-close" onclick="closeModal('purchaseInvoiceDetailModalV327')">✕</button>
+    <h3>🧾 Chi tiết hóa đơn đầu vào</h3>
+    <div id="purchaseInvoiceDetailV327"></div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script>
 // ============================================================
 // !! THAY THẾ bằng cấu hình Firebase project RIÊNG của bạn !!
@@ -1450,6 +1507,7 @@ if (!v3ConfigReady) {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+const storage = firebase.storage();
 
 let products = [];
 let customers = [];
@@ -1479,6 +1537,10 @@ let accountingDocumentsV322 = [];
 let accountingAuditLogsV322 = [];
 let accountingPeriodsV322 = [];
 let currentAccountingDocumentV322 = null;
+let purchaseInvoicesV327 = [];
+let purchaseInvoiceAuditLogsV327 = [];
+let currentPurchaseInvoiceV327 = null;
+let pendingPurchaseInvoiceContextV327 = null;
 let storeListenersStarted = false;
 let authInitToken = 0;
 
@@ -2300,6 +2362,9 @@ function openStockIn(productId){
   document.getElementById('stockInPaid').value = '';
   document.getElementById('stockInPaymentMethod').value='cash';
   document.getElementById('stockInSupplier').value = '';
+  const invoiceWrapV327=document.getElementById('stockInInvoiceQuickWrapV327');
+  if(invoiceWrapV327)invoiceWrapV327.style.display=canV3('accounting')?'flex':'none';
+  const invoiceCheckV327=document.getElementById('stockInHasInvoiceV327');if(invoiceCheckV327)invoiceCheckV327.checked=false;
   updateStockInPreview();
   openModal('stockInModal');
 }
@@ -2326,14 +2391,14 @@ function updateStockInPreview(){
 }
 async function confirmStockIn(){
   if(!requireV3('stock'))return;if(!requireAccountingPeriodOpenV322())return;const btn=document.getElementById('stockInConfirmBtn');if(btn.disabled)return;const id=document.getElementById('stockInProductId').value,p=products.find(x=>x.id===id);if(!p)return;const u=getSelectedStockInUnit(),qty=parseFloat(document.getElementById('stockInQty').value)||0,costSel=parseFloat(document.getElementById('stockInCost').value)||0,lotNumber=document.getElementById('stockInLot').value.trim(),expiry=document.getElementById('stockInExpiry').value||null,supplierId=document.getElementById('stockInSupplier').value||null,supplier=suppliers.find(x=>x.id===supplierId),paidRaw=document.getElementById('stockInPaid').value.trim(),paymentMethod=document.getElementById('stockInPaymentMethod').value||'cash';if(qty<=0){alert('Số lượng nhập phải lớn hơn 0.');return;}if(costSel<=0){alert('Giá nhập phải lớn hơn 0.');return;}const baseQty=qty*u.factor,unitCostBase=costSel/u.factor,total=qty*costSel,paid=paidRaw===''?(supplierId?0:total):(parseFloat(paidRaw)||0);if(paid<0||paid>total){alert('Số đã trả không hợp lệ.');return;}const debt=total-paid;if(debt>0&&!supplierId){alert('Phiếu còn nợ, vui lòng chọn NCC.');return;}
-  const receiptRef=storeRef.collection('purchaseReceipts').doc(),lotRef=storeRef.collection('inventoryLots').doc(),stockRef=branchStockRefV3(id);btn.disabled=true;btn.textContent='Đang lưu...';
+  const receiptRef=storeRef.collection('purchaseReceipts').doc(),lotRef=storeRef.collection('inventoryLots').doc(),stockRef=branchStockRefV3(id),receiptNo='PN-'+Date.now(),quickInvoice=!!document.getElementById('stockInHasInvoiceV327')?.checked;btn.disabled=true;btn.textContent='Đang lưu...';
   try{let avgCost=unitCostBase;await db.runTransaction(async tx=>{const stockDoc=await tx.get(stockRef);const old=stockDoc.exists?stockDoc.data():{},oldStock=Number(old.stock||0),oldCost=Number(old.avgCost??old.cost??0),newStock=oldStock+baseQty;avgCost=newStock>0?((oldStock*oldCost)+(baseQty*unitCostBase))/newStock:unitCostBase;let suppDoc=null,suppRef=null;if(debt>0&&supplierId){suppRef=storeRef.collection('suppliers').doc(supplierId);suppDoc=await tx.get(suppRef);}
     tx.set(stockRef,{branchId:currentBranchIdV3,productId:id,stock:newStock,cost:avgCost,avgCost,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    tx.set(receiptRef,{branchId:currentBranchIdV3,receiptNo:'PN-'+Date.now(),supplierId:supplierId||null,supplierName:supplier?supplier.name:'',items:[{productId:id,productName:p.name,qty,unit:u.name,factor:u.factor,baseQty,cost:costSel,unitCostBase,lotNumber,expiry}],total,paidAmount:paid,debtAmount:debt,paymentMethod,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    tx.set(receiptRef,{branchId:currentBranchIdV3,receiptNo,supplierId:supplierId||null,supplierName:supplier?supplier.name:'',items:[{productId:id,productName:p.name,qty,unit:u.name,factor:u.factor,baseQty,cost:costSel,unitCostBase,lotNumber,expiry}],total,paidAmount:paid,debtAmount:debt,paymentMethod,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     tx.set(lotRef,{branchId:currentBranchIdV3,productId:id,productName:p.name,lotNumber:lotNumber||'',expiry,qtyInitial:baseQty,qtyRemaining:baseQty,baseUnit:p.unit,unitCost:unitCostBase,supplierId:supplierId||null,supplierName:supplier?supplier.name:'',purchaseReceiptId:receiptRef.id,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     tx.set(storeRef.collection('stockLogs').doc(),{branchId:currentBranchIdV3,type:'purchase',productId:id,productName:p.name,qty:baseQty,unit:p.unit,cost:unitCostBase,lotNumber,expiry,referenceId:receiptRef.id,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     if(debt>0&&supplierId){const oldDebt=suppDoc.exists?Number(suppDoc.data().debt||0):0,upd={debt:oldDebt+debt};if(oldDebt<=0)upd.debtSince=firebase.firestore.FieldValue.serverTimestamp();tx.update(suppRef,upd);tx.set(storeRef.collection('supplierDebtLedger').doc(),{branchId:currentBranchIdV3,supplierId,supplierName:supplier?supplier.name:'',type:'purchase',debit:debt,credit:0,description:'Nhập hàng '+p.name,referenceId:receiptRef.id,createdAt:firebase.firestore.FieldValue.serverTimestamp()});}
-  });closeModal('stockInModal');alert('Đã nhập '+qty+' '+u.name+' vào '+branchNameV3(currentBranchIdV3)+'. Giá vốn bình quân mới: '+money(avgCost)+'/'+p.unit);}catch(e){alert('Lỗi nhập kho: '+e.message);}finally{btn.disabled=false;btn.textContent='Lưu phiếu & nhập kho';}
+  });closeModal('stockInModal');alert('Đã nhập '+qty+' '+u.name+' vào '+branchNameV3(currentBranchIdV3)+'. Giá vốn bình quân mới: '+money(avgCost)+'/'+p.unit);if(quickInvoice&&canV3('accounting'))setTimeout(()=>openPurchaseInvoiceModalV327(receiptRef.id),120);}catch(e){alert('Lỗi nhập kho: '+e.message);}finally{btn.disabled=false;btn.textContent='Lưu phiếu & nhập kho';}
 }
 
 // ---------- PHIẾU NHẬP NHIỀU SẢN PHẨM ----------
@@ -2350,7 +2415,7 @@ function openBulkStockIn(){
   bulkStockInItems=[]; fillBulkStockInSuppliers(); fillBulkStockInProducts();
   document.getElementById('bulkStockInSupplier').value=''; document.getElementById('bulkStockInProduct').value='';
   document.getElementById('bulkStockInUnit').innerHTML='<option value="">-- Chọn đơn vị --</option>';
-  ['bulkStockInQty','bulkStockInCost','bulkStockInLot','bulkStockInExpiry','bulkStockInPaid','bulkStockInNote'].forEach(id=>document.getElementById(id).value=''); document.getElementById('bulkStockInPaymentMethod').value='cash';
+  ['bulkStockInQty','bulkStockInCost','bulkStockInLot','bulkStockInExpiry','bulkStockInPaid','bulkStockInNote'].forEach(id=>document.getElementById(id).value=''); document.getElementById('bulkStockInPaymentMethod').value='cash';const iw=document.getElementById('bulkStockInInvoiceQuickWrapV327');if(iw)iw.style.display=canV3('accounting')?'flex':'none';const ic=document.getElementById('bulkStockInHasInvoiceV327');if(ic)ic.checked=false;
   renderBulkStockInItems(); openModal('bulkStockInModal');
 }
 function onBulkStockInProductChange(){
@@ -2383,12 +2448,12 @@ function renderBulkStockInItems(){
   updateBulkStockInSummary();
 }
 async function confirmBulkStockIn(){
-  if(!requireV3('stock'))return;if(!requireAccountingPeriodOpenV322())return;const btn=document.getElementById('bulkStockInConfirmBtn');if(btn.disabled)return;const supplierId=document.getElementById('bulkStockInSupplier').value,supplier=suppliers.find(s=>s.id===supplierId);if(!supplierId||!supplier){alert('Vui lòng chọn nhà cung cấp.');return;}if(!bulkStockInItems.length){alert('Phiếu nhập chưa có sản phẩm.');return;}const items=bulkStockInItems.map(x=>({...x})),total=items.reduce((s,x)=>s+Number(x.lineTotal||0),0),paidRaw=document.getElementById('bulkStockInPaid').value.trim(),paid=paidRaw===''?0:(parseFloat(paidRaw)||0);if(paid<0||paid>total){alert('Số tiền đã trả không hợp lệ.');return;}const debt=total-paid,note=document.getElementById('bulkStockInNote').value.trim(),paymentMethod=document.getElementById('bulkStockInPaymentMethod').value||'cash',receiptNo='PN-'+Date.now(),receiptRef=storeRef.collection('purchaseReceipts').doc(),grouped={};items.forEach(x=>{if(!grouped[x.productId])grouped[x.productId]={baseQty:0,value:0};grouped[x.productId].baseQty+=Number(x.baseQty)||0;grouped[x.productId].value+=(Number(x.baseQty)||0)*(Number(x.unitCostBase)||0);});const ids=Object.keys(grouped),refs=ids.map(id=>branchStockRefV3(id)),suppRef=storeRef.collection('suppliers').doc(supplierId);btn.disabled=true;btn.textContent='Đang lưu phiếu...';
+  if(!requireV3('stock'))return;if(!requireAccountingPeriodOpenV322())return;const btn=document.getElementById('bulkStockInConfirmBtn');if(btn.disabled)return;const supplierId=document.getElementById('bulkStockInSupplier').value,supplier=suppliers.find(s=>s.id===supplierId);if(!supplierId||!supplier){alert('Vui lòng chọn nhà cung cấp.');return;}if(!bulkStockInItems.length){alert('Phiếu nhập chưa có sản phẩm.');return;}const items=bulkStockInItems.map(x=>({...x})),total=items.reduce((s,x)=>s+Number(x.lineTotal||0),0),paidRaw=document.getElementById('bulkStockInPaid').value.trim(),paid=paidRaw===''?0:(parseFloat(paidRaw)||0);if(paid<0||paid>total){alert('Số tiền đã trả không hợp lệ.');return;}const debt=total-paid,note=document.getElementById('bulkStockInNote').value.trim(),paymentMethod=document.getElementById('bulkStockInPaymentMethod').value||'cash',receiptNo='PN-'+Date.now(),receiptRef=storeRef.collection('purchaseReceipts').doc(),quickInvoice=!!document.getElementById('bulkStockInHasInvoiceV327')?.checked,grouped={};items.forEach(x=>{if(!grouped[x.productId])grouped[x.productId]={baseQty:0,value:0};grouped[x.productId].baseQty+=Number(x.baseQty)||0;grouped[x.productId].value+=(Number(x.baseQty)||0)*(Number(x.unitCostBase)||0);});const ids=Object.keys(grouped),refs=ids.map(id=>branchStockRefV3(id)),suppRef=storeRef.collection('suppliers').doc(supplierId);btn.disabled=true;btn.textContent='Đang lưu phiếu...';
   try{await db.runTransaction(async tx=>{const docs=await Promise.all(refs.map(r=>tx.get(r))),suppDoc=await tx.get(suppRef);if(!suppDoc.exists)throw new Error('NCC không còn tồn tại.');tx.set(receiptRef,{branchId:currentBranchIdV3,receiptNo,supplierId,supplierName:supplier.name,items:items.map(x=>({productId:x.productId,productName:x.productName,qty:x.qty,unit:x.unit,factor:x.factor,baseQty:x.baseQty,cost:x.cost,unitCostBase:x.unitCostBase,lotNumber:x.lotNumber||'',expiry:x.expiry||null,lineTotal:x.lineTotal,baseUnit:x.baseUnit})),total,paidAmount:paid,debtAmount:debt,paymentMethod,note,itemCount:items.length,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     docs.forEach((doc,i)=>{const old=doc.exists?doc.data():{},g=grouped[ids[i]],oldStock=Number(old.stock||0),oldCost=Number(old.avgCost??old.cost??0),newStock=oldStock+g.baseQty,avg=newStock>0?((oldStock*oldCost)+g.value)/newStock:0;tx.set(refs[i],{branchId:currentBranchIdV3,productId:ids[i],stock:newStock,cost:avg,avgCost:avg,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});});
     items.forEach(x=>{const lotRef=storeRef.collection('inventoryLots').doc(),logRef=storeRef.collection('stockLogs').doc();tx.set(lotRef,{branchId:currentBranchIdV3,productId:x.productId,productName:x.productName,lotNumber:x.lotNumber||'',expiry:x.expiry||null,qtyInitial:x.baseQty,qtyRemaining:x.baseQty,baseUnit:x.baseUnit,unitCost:x.unitCostBase,supplierId,supplierName:supplier.name,purchaseReceiptId:receiptRef.id,createdAt:firebase.firestore.FieldValue.serverTimestamp()});tx.set(logRef,{branchId:currentBranchIdV3,type:'purchase',productId:x.productId,productName:x.productName,qty:x.baseQty,unit:x.baseUnit,cost:x.unitCostBase,lotNumber:x.lotNumber||'',expiry:x.expiry||null,referenceId:receiptRef.id,createdAt:firebase.firestore.FieldValue.serverTimestamp()});});
     if(debt>0){const oldDebt=Number(suppDoc.data().debt||0),upd={debt:oldDebt+debt};if(oldDebt<=0)upd.debtSince=firebase.firestore.FieldValue.serverTimestamp();tx.update(suppRef,upd);tx.set(storeRef.collection('supplierDebtLedger').doc(),{branchId:currentBranchIdV3,supplierId,supplierName:supplier.name,type:'purchase',debit:debt,credit:0,description:'Phiếu nhập '+receiptNo+' · '+items.length+' dòng hàng',referenceId:receiptRef.id,createdAt:firebase.firestore.FieldValue.serverTimestamp()});}
-  });bulkStockInItems=[];closeModal('bulkStockInModal');alert('Đã lưu '+receiptNo+' tại '+branchNameV3(currentBranchIdV3)+'\nTổng: '+money(total)+'\nCòn nợ NCC: '+money(debt));}catch(e){alert('Lỗi lưu phiếu nhập: '+e.message);}finally{btn.disabled=false;btn.textContent='✅ Lưu phiếu & nhập kho';}
+  });bulkStockInItems=[];closeModal('bulkStockInModal');alert('Đã lưu '+receiptNo+' tại '+branchNameV3(currentBranchIdV3)+'\nTổng: '+money(total)+'\nCòn nợ NCC: '+money(debt));if(quickInvoice&&canV3('accounting'))setTimeout(()=>openPurchaseInvoiceModalV327(receiptRef.id),120);}catch(e){alert('Lỗi lưu phiếu nhập: '+e.message);}finally{btn.disabled=false;btn.textContent='✅ Lưu phiếu & nhập kho';}
 }
 
 // ---------- BÁN HÀNG (POS) ----------
@@ -3126,6 +3191,8 @@ function listenAccountingV321(){
   subV3(storeRef.collection('accountingDocuments').where('branchId','==',currentBranchIdV3),snap=>{accountingDocumentsV322=snap.docs.map(d=>({id:d.id,...d.data()}));renderAccountingV321();},e=>console.warn('Kế toán - chứng từ:',e));
   subV3(storeRef.collection('accountingAuditLogs').where('branchId','==',currentBranchIdV3),snap=>{accountingAuditLogsV322=snap.docs.map(d=>({id:d.id,...d.data()}));renderAccountingDocumentsV322();},e=>console.warn('Kế toán - nhật ký:',e));
   subV3(storeRef.collection('accountingPeriods').where('branchId','==',currentBranchIdV3),snap=>{accountingPeriodsV322=snap.docs.map(d=>({id:d.id,...d.data()}));renderAccountingV321();},e=>console.warn('Kế toán - khóa sổ:',e));
+  subV3(storeRef.collection('purchaseInvoices').where('branchId','==',currentBranchIdV3),snap=>{purchaseInvoicesV327=snap.docs.map(d=>({id:d.id,...d.data()}));renderPurchaseInvoicesV327();},e=>console.warn('Kế toán - hóa đơn đầu vào:',e));
+  subV3(storeRef.collection('purchaseInvoiceAuditLogs').where('branchId','==',currentBranchIdV3),snap=>{purchaseInvoiceAuditLogsV327=snap.docs.map(d=>({id:d.id,...d.data()}));},e=>console.warn('Kế toán - nhật ký hóa đơn đầu vào:',e));
 }
 function buildAccountingRowsV321(){
   const rows=[];
@@ -3174,7 +3241,7 @@ function renderAccountingV321(){
   const pnl=document.getElementById('accountingPnlV321');if(pnl)pnl.innerHTML=`<b>Kết quả kinh doanh ${escapeHtmlV211(month)}</b><br>Doanh thu: <b>${money(rev)}</b> · Giá vốn: <b>${money(rev-gross)}</b><br>Lãi gộp: <b>${money(gross)}</b> · Chi phí hoạt động: <b>${money(op)}</b><br>Lợi nhuận trước thuế: <b style="color:${pretax>=0?'var(--leaf-500)':'var(--rust-500)'}">${money(pretax)}</b>`;
   const docs=accountingDocMapV322();
   root.innerHTML=monthRows.length?monthRows.map(r=>{const d=docs.get(r.id);return `<div class="prod-item" style="align-items:flex-start;"><div class="prod-ic">${paymentMethodIconV321(r.account)}</div><div style="flex:1;min-width:0;"><div class="prod-name">${escapeHtmlV211(r.description)}</div><div class="prod-meta">${r.date.toLocaleDateString('vi-VN')} · ${sourceNameV321(r.source)} · ${paymentMethodNameV321(r.account)}${r.entryKind==='opening'?' · Số dư đầu kỳ':''}</div><div class="prod-meta">${d?`🧾 ${escapeHtmlV211(d.docNo||'Đã có chứng từ')}`:'⚠️ Chưa lập chứng từ'}${r.note?' · 📝 '+escapeHtmlV211(r.note):''}</div></div><div style="text-align:right;"><div class="mono" style="font-weight:700;color:${r.direction==='in'?'var(--leaf-500)':'var(--rust-500)'};">${r.direction==='in'?'+':'−'}${money(r.amount)}</div>${r.manualId?`<button class="btn btn-sm btn-ghost" style="width:auto;margin-top:5px;" onclick="cancelAccountingEntryV322('${r.manualId}')">Hủy</button>`:''}</div></div>`;}).join(''):'<div class="empty-state">Chưa có giao dịch trong tháng/bộ lọc này.</div>';
-  renderAccountingReconciliationV322();renderAccountingDocumentsV322();renderAccountingLockButtonV322();
+  renderAccountingReconciliationV322();renderAccountingDocumentsV322();renderAccountingLockButtonV322();renderPurchaseInvoicesV327();
 }
 function renderAccountingLockButtonV322(){const btn=document.getElementById('accountingLockBtnV322');if(!btn)return;const month=document.getElementById('accountingMonthV321')?.value||monthKeyV22(),locked=isAccountingPeriodLockedV322(month);btn.textContent=locked?'🔓 Mở khóa sổ '+month:'🔒 Khóa sổ '+month;btn.style.display=currentUserRoleV3==='owner'?'block':'none';}
 function renderAccountingReconciliationV322(){
@@ -3255,6 +3322,68 @@ function accountingBalanceDataV323(month){
   eligible.forEach(r=>{const d=docs.get(r.id);if(!d){missing++;return;}const ok=Number(d.amount||0)===Number(r.amount||0)&&d.account===r.account&&d.direction===r.direction&&d.status!=='cancelled';ok?matched++:mismatch++;});
   return {balance,receivable,payable,inventory,totalAssets,netWorth,totalSources,totalIn,totalOut,netCashflow:totalIn-totalOut,revenue,cogs,gross,operatingExpense,pretax,eligibleCount:eligible.length,matched,missing,mismatch,unclassifiedCount:unclassifiedRows.length,unclassifiedMonthAmount:unclassifiedRows.reduce((a,r)=>a+r.amount,0),locked:isAccountingPeriodLockedV322(month)};
 }
+
+// ---------- V3.2.7: HÓA ĐƠN ĐẦU VÀO NCC ----------
+function invoiceDateV327(x){if(x?.invoiceDate)return new Date(x.invoiceDate+'T12:00:00');if(x?.createdAt?.toDate)return x.createdAt.toDate();return null;}
+function invoiceMonthV327(x){const d=invoiceDateV327(x);return d?accountingMonthKeyV321(d):'';}
+function invoiceStatusNameV327(v){return v==='cancelled'?'Đã hủy':'Đang hiệu lực';}
+function purchaseReceiptMonthV327(x){const d=accountingDateV321(x);return d?accountingMonthKeyV321(d):'';}
+function invoiceSafeFileNameV327(name){return String(name||'file').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(-100)||'file';}
+function invoiceReconcileV327(inv){const r=accountingPurchaseReceiptsV321.find(x=>x.id===inv.purchaseReceiptId);if(!r)return{status:'unlinked',label:'Chưa liên kết phiếu nhập',diff:null,receipt:null};const diff=Number(inv.totalAmount||0)-Number(r.total||0);const tol=1;return{status:Math.abs(diff)<=tol?'matched':'mismatch',label:Math.abs(diff)<=tol?'Khớp phiếu nhập':'Lệch '+money(diff),diff,receipt:r};}
+function fillPurchaseInvoiceSelectorsV327(selectedReceiptId=''){
+  const rs=document.getElementById('purchaseInvoiceReceiptV327'),ss=document.getElementById('purchaseInvoiceSupplierV327');if(!rs||!ss)return;
+  const month=document.getElementById('accountingMonthV321')?.value||monthKeyV22();
+  const receipts=accountingPurchaseReceiptsV321.slice().sort((a,b)=>(accountingDateV321(b)||0)-(accountingDateV321(a)||0));
+  rs.innerHTML='<option value="">-- Chưa liên kết phiếu nhập --</option>'+receipts.map(r=>`<option value="${r.id}">${escapeHtmlV211(r.receiptNo||r.id)} · ${escapeHtmlV211(r.supplierName||'NCC')} · ${money(r.total||0)}${purchaseReceiptMonthV327(r)===month?'':' · '+purchaseReceiptMonthV327(r)}</option>`).join('');
+  ss.innerHTML='<option value="">-- Chọn NCC --</option>'+suppliers.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi')).map(x=>`<option value="${x.id}">${escapeHtmlV211(x.name||'NCC')}</option>`).join('');
+  if(selectedReceiptId)rs.value=selectedReceiptId;
+}
+function openPurchaseInvoiceModalV327(receiptId=''){
+  if(!requireV3('accounting'))return;if(!requireAccountingPeriodOpenV322())return;currentPurchaseInvoiceV327=null;fillPurchaseInvoiceSelectorsV327(receiptId);
+  ['purchaseInvoiceNoV327','purchaseInvoiceSerialV327','purchaseInvoiceTaxCodeV327','purchaseInvoicePretaxV327','purchaseInvoiceVatV327','purchaseInvoiceTotalV327','purchaseInvoiceNoteV327'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  const d=document.getElementById('purchaseInvoiceDateV327');if(d)d.value=new Date().toISOString().slice(0,10);const pm=document.getElementById('purchaseInvoicePaymentMethodV327');if(pm)pm.value='unclassified';const f=document.getElementById('purchaseInvoiceFilesV327');if(f)f.value='';
+  if(receiptId)onPurchaseInvoiceReceiptChangeV327();else updatePurchaseInvoiceCompareV327();openModal('purchaseInvoiceModalV327');
+}
+function onPurchaseInvoiceReceiptChangeV327(){
+  const id=document.getElementById('purchaseInvoiceReceiptV327')?.value||'',r=accountingPurchaseReceiptsV321.find(x=>x.id===id);if(r){const s=document.getElementById('purchaseInvoiceSupplierV327');if(s)s.value=r.supplierId||'';const total=document.getElementById('purchaseInvoiceTotalV327');if(total&&!total.value)total.value=Number(r.total||0)||'';const pm=document.getElementById('purchaseInvoicePaymentMethodV327');if(pm)pm.value=accountingAccountV321(r.paymentMethod);}updatePurchaseInvoiceCompareV327();
+}
+function updatePurchaseInvoiceTotalV327(){const a=Number(document.getElementById('purchaseInvoicePretaxV327')?.value||0),v=Number(document.getElementById('purchaseInvoiceVatV327')?.value||0),t=document.getElementById('purchaseInvoiceTotalV327');if(t&&(a>0||v>0))t.value=a+v;updatePurchaseInvoiceCompareV327();}
+function updatePurchaseInvoiceCompareV327(){
+  const box=document.getElementById('purchaseInvoiceCompareV327');if(!box)return;const id=document.getElementById('purchaseInvoiceReceiptV327')?.value||'',r=accountingPurchaseReceiptsV321.find(x=>x.id===id),total=Number(document.getElementById('purchaseInvoiceTotalV327')?.value||0);
+  if(!r){box.innerHTML='Chọn phiếu nhập để đối chiếu số tiền.';return;}const diff=total-Number(r.total||0);box.innerHTML=`Phiếu nhập <b>${escapeHtmlV211(r.receiptNo||r.id)}</b>: ${money(r.total||0)}<br>Hóa đơn đang nhập: <b>${money(total)}</b> · ${Math.abs(diff)<=1?'<span style="color:var(--leaf-500);font-weight:700;">✅ Khớp</span>':`<span style="color:var(--rust-500);font-weight:700;">⚠️ Lệch ${money(diff)}</span>`}`;
+}
+async function uploadPurchaseInvoiceFilesV327(invoiceId,files){
+  const out=[];for(const file of files){if(file.size>10*1024*1024)throw new Error('File '+file.name+' lớn hơn 10MB.');const rawType=(file.type||'').toLowerCase(),name=(file.name||'').toLowerCase(),imageExt=/\.(png|jpe?g|webp|gif|bmp|heic|heif)$/.test(name);const ok=rawType==='application/pdf'||rawType.includes('xml')||rawType.startsWith('image/')||name.endsWith('.pdf')||name.endsWith('.xml')||imageExt;if(!ok)throw new Error('File '+file.name+' không đúng định dạng PDF/XML/ảnh.');let contentType=rawType;if(!contentType){if(name.endsWith('.pdf'))contentType='application/pdf';else if(name.endsWith('.xml'))contentType='application/xml';else if(/\.png$/.test(name))contentType='image/png';else if(/\.jpe?g$/.test(name))contentType='image/jpeg';else if(/\.webp$/.test(name))contentType='image/webp';else if(/\.gif$/.test(name))contentType='image/gif';else if(/\.heic$/.test(name))contentType='image/heic';else if(/\.heif$/.test(name))contentType='image/heif';else contentType='image/*';}const safe=Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+invoiceSafeFileNameV327(file.name),path=`stores/${organizationIdV3}/purchaseInvoices/${currentBranchIdV3}/${invoiceId}/${safe}`,ref=storage.ref(path);await ref.put(file,{contentType,customMetadata:{originalName:file.name,invoiceId,branchId:currentBranchIdV3}});out.push({name:file.name,type:contentType,size:file.size,path});}return out;
+}
+async function savePurchaseInvoiceV327(){
+  if(!requireV3('accounting'))return;const btn=document.getElementById('savePurchaseInvoiceBtnV327');if(btn?.disabled)return;const receiptId=document.getElementById('purchaseInvoiceReceiptV327')?.value||'',supplierId=document.getElementById('purchaseInvoiceSupplierV327')?.value||'',supplier=suppliers.find(x=>x.id===supplierId),invoiceNo=(document.getElementById('purchaseInvoiceNoV327')?.value||'').trim(),serial=(document.getElementById('purchaseInvoiceSerialV327')?.value||'').trim(),invoiceDate=document.getElementById('purchaseInvoiceDateV327')?.value||'',taxCode=(document.getElementById('purchaseInvoiceTaxCodeV327')?.value||'').trim(),pretax=Number(document.getElementById('purchaseInvoicePretaxV327')?.value||0),vat=Number(document.getElementById('purchaseInvoiceVatV327')?.value||0),total=Number(document.getElementById('purchaseInvoiceTotalV327')?.value||0),paymentMethod=document.getElementById('purchaseInvoicePaymentMethodV327')?.value||'unclassified',note=(document.getElementById('purchaseInvoiceNoteV327')?.value||'').trim(),receipt=accountingPurchaseReceiptsV321.find(x=>x.id===receiptId);
+  if(!supplierId||!supplier){alert('Vui lòng chọn nhà cung cấp.');return;}if(!invoiceNo){alert('Vui lòng nhập số hóa đơn.');return;}if(!invoiceDate){alert('Vui lòng chọn ngày hóa đơn.');return;}if(total<=0){alert('Tổng thanh toán phải lớn hơn 0.');return;}const month=invoiceDate.slice(0,7);if(!requireAccountingPeriodOpenV322(month))return;
+  const dup=purchaseInvoicesV327.find(x=>x.status!=='cancelled'&&x.supplierId===supplierId&&String(x.invoiceNo||'').trim().toLowerCase()===invoiceNo.toLowerCase()&&String(x.serial||'').trim().toLowerCase()===serial.toLowerCase());if(dup){alert('⚠️ Hóa đơn '+invoiceNo+(serial?' · '+serial:'')+' của NCC này đã được lưu.');return;}
+  if(receipt?.invoiceId){alert('Phiếu nhập '+(receipt.receiptNo||receipt.id)+' đã liên kết hóa đơn khác. Hãy kiểm tra lại trước khi tiếp tục.');return;}
+  const files=[...(document.getElementById('purchaseInvoiceFilesV327')?.files||[])];if(files.length>3){alert('Tối đa 3 file cho một hóa đơn.');return;}btn.disabled=true;btn.textContent=files.length?'Đang tải file & lưu...':'Đang lưu...';const ref=storeRef.collection('purchaseInvoices').doc();
+  try{const uploaded=files.length?await uploadPurchaseInvoiceFilesV327(ref.id,files):[],diff=receipt?total-Number(receipt.total||0):null,reconcileStatus=!receipt?'unlinked':Math.abs(diff)<=1?'matched':'mismatch',batch=db.batch();batch.set(ref,{branchId:currentBranchIdV3,supplierId,supplierName:supplier.name||'',invoiceNo,serial,invoiceDate,monthKey:month,sellerTaxCode:taxCode,preTaxAmount:pretax,vatAmount:vat,totalAmount:total,paymentMethod,purchaseReceiptId:receiptId||null,receiptNo:receipt?.receiptNo||'',receiptTotal:receipt?Number(receipt.total||0):null,differenceAmount:diff,reconcileStatus,files:uploaded,note,status:'active',createdByUid:auth.currentUser?.uid||'',createdAt:firebase.firestore.FieldValue.serverTimestamp()});if(receipt){batch.update(storeRef.collection('purchaseReceipts').doc(receipt.id),{invoiceId:ref.id,invoiceNo,invoiceSerial:serial,invoiceLinkedAt:firebase.firestore.FieldValue.serverTimestamp()});}batch.set(storeRef.collection('purchaseInvoiceAuditLogs').doc(),{branchId:currentBranchIdV3,invoiceId:ref.id,invoiceNo,action:'create',note:'Lưu hóa đơn đầu vào'+(receipt?' · liên kết '+(receipt.receiptNo||receipt.id):''),createdByUid:auth.currentUser?.uid||'',createdAt:firebase.firestore.FieldValue.serverTimestamp()});await batch.commit();closeModal('purchaseInvoiceModalV327');alert('✅ Đã lưu hóa đơn '+invoiceNo+(receipt?' và liên kết '+(receipt.receiptNo||'phiếu nhập'):'')+'.');}
+  catch(e){console.error(e);alert('Không lưu được hóa đơn đầu vào: '+e.message+'\n\nNếu lỗi liên quan Storage, hãy kiểm tra Firebase Storage và Storage Rules V3.2.7.');}
+  finally{btn.disabled=false;btn.textContent='✅ Lưu hóa đơn & liên kết';}
+}
+function renderPurchaseInvoicesV327(){
+  const list=document.getElementById('purchaseInvoiceListV327'),sum=document.getElementById('purchaseInvoiceSummaryV327');if(!list||!sum)return;const month=document.getElementById('accountingMonthV321')?.value||monthKeyV22(),q=(document.getElementById('purchaseInvoiceSearchV327')?.value||'').trim().toLowerCase(),active=purchaseInvoicesV327.filter(x=>x.status!=='cancelled'&&invoiceMonthV327(x)===month),matched=active.filter(x=>invoiceReconcileV327(x).status==='matched').length,mismatch=active.filter(x=>invoiceReconcileV327(x).status==='mismatch').length,unlinked=active.filter(x=>invoiceReconcileV327(x).status==='unlinked').length,receipts=accountingPurchaseReceiptsV321.filter(x=>purchaseReceiptMonthV327(x)===month),missing=receipts.filter(r=>!r.invoiceId).length;
+  sum.innerHTML=`<b>Đối chiếu hóa đơn đầu vào ${escapeHtmlV211(month)}</b><br>🧾 Hóa đơn hiệu lực: <b>${active.length}</b> · ✅ Khớp phiếu nhập: <b>${matched}</b> · ⚠️ Lệch: <b>${mismatch}</b> · 🔗 Chưa liên kết: <b>${unlinked}</b><br>📥 Phiếu nhập chưa có hóa đơn: <b style="color:${missing?'var(--rust-500)':'var(--leaf-500)'}">${missing}</b>${missing?` <button class="btn btn-sm btn-ghost" style="width:auto;margin-left:6px;" onclick="openMissingPurchaseInvoicesV327()">Xem phiếu thiếu</button>`:''}`;
+  let rows=purchaseInvoicesV327.filter(x=>invoiceMonthV327(x)===month).sort((a,b)=>String(b.invoiceDate||'').localeCompare(String(a.invoiceDate||''))||String(b.invoiceNo||'').localeCompare(String(a.invoiceNo||'')));if(q)rows=rows.filter(x=>[x.invoiceNo,x.serial,x.supplierName,x.sellerTaxCode,x.receiptNo].some(v=>String(v||'').toLowerCase().includes(q)));
+  list.innerHTML=rows.length?rows.map(x=>{const rc=invoiceReconcileV327(x),cancel=x.status==='cancelled';return `<div class="prod-item" onclick="openPurchaseInvoiceDetailV327('${x.id}')" style="cursor:pointer;align-items:flex-start;opacity:${cancel?0.58:1};"><div class="prod-ic">${cancel?'⛔':'🧾'}</div><div style="flex:1;min-width:0;"><div class="prod-name">${escapeHtmlV211(x.invoiceNo||x.id)}${x.serial?' · '+escapeHtmlV211(x.serial):''}</div><div class="prod-meta">${escapeHtmlV211(x.invoiceDate||'')} · ${escapeHtmlV211(x.supplierName||'NCC')} · MST ${escapeHtmlV211(x.sellerTaxCode||'—')}</div><div class="prod-meta">${cancel?'Đã hủy':rc.status==='matched'?'✅ Khớp '+escapeHtmlV211(rc.receipt?.receiptNo||'phiếu nhập'):rc.status==='mismatch'?'⚠️ '+escapeHtmlV211(rc.label):'🔗 Chưa liên kết phiếu nhập'} · 📎 ${(x.files||[]).length} file</div></div><div class="mono" style="font-weight:700;">${money(x.totalAmount||0)}</div></div>`;}).join(''):'<div class="empty-state">Chưa có hóa đơn đầu vào phù hợp.</div>';
+}
+function openMissingPurchaseInvoicesV327(){const month=document.getElementById('accountingMonthV321')?.value||monthKeyV22(),rows=accountingPurchaseReceiptsV321.filter(x=>purchaseReceiptMonthV327(x)===month&&!x.invoiceId).sort((a,b)=>(accountingDateV321(b)||0)-(accountingDateV321(a)||0));const box=document.getElementById('purchaseInvoiceDetailV327');box.innerHTML=`<div class="card-tight card" style="font-size:12px;line-height:1.55;">Các phiếu nhập trong tháng <b>${escapeHtmlV211(month)}</b> chưa liên kết hóa đơn đầu vào.</div>`+(rows.length?rows.map(r=>`<div class="prod-item"><div style="flex:1;"><div class="prod-name">${escapeHtmlV211(r.receiptNo||r.id)} · ${escapeHtmlV211(r.supplierName||'NCC')}</div><div class="prod-meta">${accountingDateV321(r)?.toLocaleDateString('vi-VN')||'—'} · ${money(r.total||0)}</div></div><button class="btn btn-sm btn-primary" style="width:auto;" onclick="closeModal('purchaseInvoiceDetailModalV327');openPurchaseInvoiceModalV327('${r.id}')">+ Gắn HĐ</button></div>`).join(''):'<div class="empty-state">✅ Không có phiếu nhập nào thiếu hóa đơn.</div>');openModal('purchaseInvoiceDetailModalV327');}
+async function openPurchaseInvoiceFileV327(invoiceId,index){const x=purchaseInvoicesV327.find(v=>v.id===invoiceId),f=x?.files?.[index];if(!f?.path)return;try{const url=await storage.ref(f.path).getDownloadURL();window.open(url,'_blank','noopener');}catch(e){alert('Không mở được file: '+e.message);}}
+function openPurchaseInvoiceDetailV327(id){
+  const x=purchaseInvoicesV327.find(v=>v.id===id);if(!x)return;
+  currentPurchaseInvoiceV327=x;
+  const rc=invoiceReconcileV327(x),aud=purchaseInvoiceAuditLogsV327.filter(a=>a.invoiceId===id).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+  const fileHtml=(x.files||[]).length?(x.files||[]).map((f,i)=>`<button class="btn btn-ghost" style="margin-bottom:6px;text-align:left;" onclick="openPurchaseInvoiceFileV327('${x.id}',${i})">📎 ${escapeHtmlV211(f.name||'File '+(i+1))} · ${(Number(f.size||0)/1024).toFixed(0)} KB</button>`).join(''):'<div class="empty-state">Chưa đính kèm file.</div>';
+  const auditHtml=aud.length?aud.map(a=>`<div class="prod-item"><div style="flex:1;"><div class="prod-name">${a.action==='cancel'?'Hủy hóa đơn':'Lưu hóa đơn'}</div><div class="prod-meta">${a.createdAt?.toDate?a.createdAt.toDate().toLocaleString('vi-VN'):'—'} · ${escapeHtmlV211(a.note||'')}</div></div></div>`).join(''):'<div class="empty-state">Chưa có nhật ký.</div>';
+  const cancelHtml=x.status!=='cancelled'?`<button class="btn btn-danger" style="margin-top:12px;" onclick="cancelPurchaseInvoiceV327('${x.id}')">⛔ Hủy hóa đơn đã lưu</button>`:'';
+  document.getElementById('purchaseInvoiceDetailV327').innerHTML=`<div class="card-tight card" style="line-height:1.7;"><b>${escapeHtmlV211(x.invoiceNo||id)}${x.serial?' · '+escapeHtmlV211(x.serial):''}</b><br>Ngày HĐ: ${escapeHtmlV211(x.invoiceDate||'—')} · NCC: ${escapeHtmlV211(x.supplierName||'—')}<br>MST người bán: ${escapeHtmlV211(x.sellerTaxCode||'—')}<br>Trước thuế: <b>${money(x.preTaxAmount||0)}</b> · VAT: <b>${money(x.vatAmount||0)}</b><br>Tổng thanh toán: <b>${money(x.totalAmount||0)}</b> · ${paymentMethodNameV321(x.paymentMethod)}<br>Phiếu nhập: <b>${escapeHtmlV211(x.receiptNo||'Chưa liên kết')}</b> · ${rc.status==='matched'?'✅ Khớp':rc.status==='mismatch'?'⚠️ '+escapeHtmlV211(rc.label):'Chưa đối chiếu'}<br>Trạng thái: <b>${invoiceStatusNameV327(x.status)}</b>${x.cancelReason?'<br>Lý do hủy: '+escapeHtmlV211(x.cancelReason):''}${x.note?'<br>Ghi chú: '+escapeHtmlV211(x.note):''}</div><div class="section-title" style="margin-top:12px;">File hóa đơn</div>${fileHtml}<div class="section-title" style="margin-top:12px;">Nhật ký</div>${auditHtml}${cancelHtml}`;
+  openModal('purchaseInvoiceDetailModalV327');
+}
+async function cancelPurchaseInvoiceV327(id){if(!requireV3('accounting'))return;const x=purchaseInvoicesV327.find(v=>v.id===id);if(!x||x.status==='cancelled')return;const month=(x.invoiceDate||'').slice(0,7)||monthKeyV22();if(!requireAccountingPeriodOpenV322(month))return;const reason=prompt('Lý do hủy hóa đơn đầu vào?');if(reason===null)return;if(!reason.trim()){alert('Cần nhập lý do hủy để lưu dấu vết.');return;}if(!confirm('Hủy hóa đơn '+(x.invoiceNo||id)+'? File gốc vẫn được giữ lại để phục vụ truy vết.'))return;try{const batch=db.batch();batch.update(storeRef.collection('purchaseInvoices').doc(id),{status:'cancelled',cancelReason:reason.trim(),cancelledByUid:auth.currentUser?.uid||'',cancelledAt:firebase.firestore.FieldValue.serverTimestamp()});if(x.purchaseReceiptId){const r=accountingPurchaseReceiptsV321.find(v=>v.id===x.purchaseReceiptId);if(r?.invoiceId===id)batch.update(storeRef.collection('purchaseReceipts').doc(x.purchaseReceiptId),{invoiceId:null,invoiceNo:null,invoiceSerial:null,invoiceLinkedAt:null});}batch.set(storeRef.collection('purchaseInvoiceAuditLogs').doc(),{branchId:currentBranchIdV3,invoiceId:id,invoiceNo:x.invoiceNo||'',action:'cancel',note:reason.trim(),createdByUid:auth.currentUser?.uid||'',createdAt:firebase.firestore.FieldValue.serverTimestamp()});await batch.commit();closeModal('purchaseInvoiceDetailModalV327');}catch(e){alert('Không hủy được hóa đơn: '+e.message);}}
 
 // ---------- V3.2.6: XUẤT EXCEL XLSX THẬT ----------
 function ensureXlsxV326(){
@@ -3348,6 +3477,10 @@ function exportAccountingBalanceXlsxV326(){
       ['E1','Giao dịch cần chứng từ',d.eligibleCount,''],['E2','Đã khớp chứng từ',d.matched,''],['E3','Chưa lập chứng từ',d.missing,'Cần xử lý trước khi khóa sổ'],['E4','Lệch dữ liệu chứng từ',d.mismatch,'Kiểm tra số tiền/tài khoản/Thu-Chi'],['E5','Giao dịch chưa phân loại',d.unclassifiedCount,'Tổng phát sinh '+Math.round(d.unclassifiedMonthAmount).toLocaleString('vi-VN')+'đ'],['E6','Trạng thái khóa sổ',d.locked?'ĐÃ KHÓA':'ĐANG MỞ','Kỳ '+month]
     ];
     const ws4=XLSX.utils.aoa_to_sheet(reconcile); setSheetWidthsV326(ws4,[10,32,18,52]); ws4['!merges']=[XLSX.utils.decode_range('A1:D1')]; appendSheetSafeV326(wb,ws4,'Đối chiếu');
+
+    const invoiceRows=[['SỔ NHÀ NÔNG - HÓA ĐƠN ĐẦU VÀO NCC'],['Cơ sở',branch],['Kỳ',month],[],['Ngày HĐ','Số HĐ','Ký hiệu','Nhà cung cấp','MST','Trước thuế','VAT','Tổng thanh toán','Thanh toán','Phiếu nhập','Đối chiếu','Số file','Trạng thái']];
+    purchaseInvoicesV327.filter(x=>invoiceMonthV327(x)===month).sort((a,b)=>String(a.invoiceDate||'').localeCompare(String(b.invoiceDate||''))).forEach(x=>{const rc=invoiceReconcileV327(x);invoiceRows.push([x.invoiceDate||'',x.invoiceNo||'',x.serial||'',x.supplierName||'',x.sellerTaxCode||'',Number(x.preTaxAmount||0),Number(x.vatAmount||0),Number(x.totalAmount||0),paymentMethodNameV321(x.paymentMethod),x.receiptNo||'',rc.status==='matched'?'Khớp':rc.status==='mismatch'?rc.label:'Chưa liên kết',Number((x.files||[]).length),invoiceStatusNameV327(x.status)]);});
+    const ws5=XLSX.utils.aoa_to_sheet(invoiceRows);setSheetWidthsV326(ws5,[12,16,14,28,16,16,14,18,16,18,22,10,14]);setMoneyFormatV326(ws5,[5,6,7]);ws5['!merges']=[XLSX.utils.decode_range('A1:M1')];appendSheetSafeV326(wb,ws5,'HĐ đầu vào');
 
     const filename='So_Nha_Nong_Bang_Can_Doi_'+currentBranchIdV3+'_'+month+'.xlsx';
     saveWorkbookV326(wb,filename);
