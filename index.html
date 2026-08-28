@@ -430,7 +430,7 @@ input:focus,select:focus,textarea:focus{
 <div id="app">
   <div class="topbar">
     <div>
-      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V3.2.1</span></div>
+      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V3.2.6</span></div>
       <div class="sub" id="storeGreeting">Xin chào</div>
       <div class="branch-toolbar" id="branchToolbar" style="display:none;">
         <select id="branchSwitcher" onchange="switchBranchV3(this.value)"></select>
@@ -565,8 +565,8 @@ input:focus,select:focus,textarea:focus{
       <button class="btn btn-primary" style="flex:1;min-width:150px;" onclick="openAccountingEntryV321()">+ Thu / Chi / Số dư đầu kỳ</button>
       <button class="btn btn-ghost" style="flex:1;min-width:155px;" onclick="syncAccountingDocumentsV322()">🔄 Lập chứng từ từ giao dịch</button>
       <button class="btn btn-ghost" id="accountingLockBtnV322" style="flex:1;min-width:135px;" onclick="toggleAccountingPeriodV322()">🔒 Khóa sổ tháng</button>
-      <button class="btn btn-ghost" style="flex:1;min-width:155px;" onclick="exportAccountingBalanceCsvV323()">📊 Xuất bảng cân đối</button>
-      <button class="btn btn-ghost" style="flex:1;min-width:150px;" onclick="exportAccountingJournalCsvV323()">📄 Xuất nhật ký</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:155px;" onclick="exportAccountingBalanceXlsxV326()">📊 Xuất Excel cân đối</button>
+      <button class="btn btn-ghost" style="flex:1;min-width:150px;" onclick="exportAccountingJournalXlsxV326()">📄 Xuất Excel nhật ký</button>
     </div>
 
     <div class="card-tight card" style="margin-bottom:12px;">
@@ -3255,6 +3255,126 @@ function accountingBalanceDataV323(month){
   eligible.forEach(r=>{const d=docs.get(r.id);if(!d){missing++;return;}const ok=Number(d.amount||0)===Number(r.amount||0)&&d.account===r.account&&d.direction===r.direction&&d.status!=='cancelled';ok?matched++:mismatch++;});
   return {balance,receivable,payable,inventory,totalAssets,netWorth,totalSources,totalIn,totalOut,netCashflow:totalIn-totalOut,revenue,cogs,gross,operatingExpense,pretax,eligibleCount:eligible.length,matched,missing,mismatch,unclassifiedCount:unclassifiedRows.length,unclassifiedMonthAmount:unclassifiedRows.reduce((a,r)=>a+r.amount,0),locked:isAccountingPeriodLockedV322(month)};
 }
+
+// ---------- V3.2.6: XUẤT EXCEL XLSX THẬT ----------
+function ensureXlsxV326(){
+  if(typeof XLSX!=='undefined' && XLSX && XLSX.utils && XLSX.writeFile)return true;
+  alert('Không tải được thư viện Excel (SheetJS). Hãy kiểm tra kết nối Internet rồi tải lại ứng dụng.');
+  return false;
+}
+function setSheetWidthsV326(ws,widths){
+  ws['!cols']=widths.map(w=>({wch:w}));
+}
+function setMoneyFormatV326(ws,cols){
+  const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+  for(let r=range.s.r;r<=range.e.r;r++){
+    cols.forEach(c=>{
+      const addr=XLSX.utils.encode_cell({r,c});
+      const cell=ws[addr];
+      if(cell && typeof cell.v==='number') cell.z='#,##0';
+    });
+  }
+}
+function appendSheetSafeV326(wb,ws,name){
+  let n=String(name||'Sheet').replace(/[\\\/\?\*\[\]:]/g,' ').trim().slice(0,31)||'Sheet';
+  let base=n,i=2;
+  while(wb.SheetNames.includes(n)){n=(base.slice(0,27)+' '+i).slice(0,31);i++;}
+  XLSX.utils.book_append_sheet(wb,ws,n);
+}
+function saveWorkbookV326(wb,filename){
+  const out=XLSX.write(wb,{bookType:'xlsx',type:'array',compression:true});
+  const blob=new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;a.style.display='none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{try{document.body.removeChild(a);}catch(_){}URL.revokeObjectURL(url);},1500);
+}
+function exportAccountingBalanceXlsxV326(){
+  if(!requireV3('accounting'))return;
+  if(!ensureXlsxV326())return;
+  try{
+    const month=document.getElementById('accountingMonthV321')?.value||monthKeyV22();
+    const d=accountingBalanceDataV323(month), now=new Date(), branch=branchNameV3(currentBranchIdV3);
+    const wb=XLSX.utils.book_new();
+    wb.Props={Title:'Sổ Nhà Nông - Bảng cân đối quản trị',Subject:'Báo cáo quản trị nội bộ',Author:'Sổ Nhà Nông',CreatedDate:now};
+
+    const overview=[
+      ['SỔ NHÀ NÔNG - BẢNG CÂN ĐỐI QUẢN TRỊ'],
+      ['Cơ sở',branch],
+      ['Ngày xuất',now.toLocaleString('vi-VN')],
+      ['Kỳ báo cáo',month],
+      [],
+      ['MÃ','CHỈ TIÊU','GIÁ TRỊ (VNĐ)','GHI CHÚ'],
+      ['A','A. TÀI SẢN','',''],
+      ['A1','Tiền mặt',d.balance.cash,'Số dư sổ quỹ tiền mặt'],
+      ['A2','Tiền ngân hàng',d.balance.bank,'Số dư giao dịch ngân hàng'],
+      ['A3','Tiền/chênh lệch chưa phân loại',d.balance.unclassified,'Cần phân loại Tiền mặt hoặc Ngân hàng'],
+      ['A4','Phải thu khách hàng',d.receivable,'Công nợ khách hàng hiện tại'],
+      ['A5','Hàng tồn kho theo giá vốn',d.inventory,'Tồn kho hiện tại × giá vốn bình quân'],
+      ['A','TỔNG TÀI SẢN',d.totalAssets,''],
+      [],
+      ['B','B. NGUỒN VỐN & CÔNG NỢ','',''],
+      ['B1','Phải trả nhà cung cấp',d.payable,'Công nợ nhà cung cấp hiện tại'],
+      ['B2','Giá trị ròng tạm tính',d.netWorth,'Tổng tài sản - Phải trả NCC'],
+      ['B','TỔNG NGUỒN VỐN',d.totalSources,''],
+      ['','CHÊNH LỆCH CÂN ĐỐI',d.totalAssets-d.totalSources,'Theo công thức quản trị phải bằng 0'],
+      [],
+      ['LƯU Ý','Đây là báo cáo quản trị nội bộ, chưa thay thế báo cáo kế toán/thuế chính thức theo biểu mẫu pháp luật.']
+    ];
+    const ws1=XLSX.utils.aoa_to_sheet(overview);
+    setSheetWidthsV326(ws1,[10,34,18,58]); setMoneyFormatV326(ws1,[2]);
+    ws1['!merges']=[XLSX.utils.decode_range('A1:D1')];
+    appendSheetSafeV326(wb,ws1,'Tổng quan');
+
+    const kqkd=[
+      ['SỔ NHÀ NÔNG - KẾT QUẢ KINH DOANH'],['Cơ sở',branch],['Kỳ',month],[],
+      ['MÃ','CHỈ TIÊU','GIÁ TRỊ (VNĐ)','GHI CHÚ'],
+      ['C1','Doanh thu',d.revenue,''],['C2','Giá vốn hàng bán',d.cogs,''],['C3','Lãi gộp',d.gross,'Doanh thu - Giá vốn'],['C4','Chi phí hoạt động',d.operatingExpense,''],['C5','LỢI NHUẬN TRƯỚC THUẾ',d.pretax,'Lãi gộp - Chi phí hoạt động']
+    ];
+    const ws2=XLSX.utils.aoa_to_sheet(kqkd); setSheetWidthsV326(ws2,[10,32,18,44]); setMoneyFormatV326(ws2,[2]); ws2['!merges']=[XLSX.utils.decode_range('A1:D1')]; appendSheetSafeV326(wb,ws2,'KQKD');
+
+    const cashflow=[
+      ['SỔ NHÀ NÔNG - DÒNG TIỀN'],['Cơ sở',branch],['Kỳ',month],[],
+      ['MÃ','CHỈ TIÊU','GIÁ TRỊ (VNĐ)','GHI CHÚ'],
+      ['D1','Tổng tiền thu',d.totalIn,'Không gồm số dư đầu kỳ'],['D2','Tổng tiền chi',d.totalOut,''],['D3','Dòng tiền ròng',d.netCashflow,'Thu - Chi']
+    ];
+    const ws3=XLSX.utils.aoa_to_sheet(cashflow); setSheetWidthsV326(ws3,[10,28,18,44]); setMoneyFormatV326(ws3,[2]); ws3['!merges']=[XLSX.utils.decode_range('A1:D1')]; appendSheetSafeV326(wb,ws3,'Dòng tiền');
+
+    const reconcile=[
+      ['SỔ NHÀ NÔNG - ĐỐI CHIẾU CHỨNG TỪ'],['Cơ sở',branch],['Kỳ',month],[],
+      ['MÃ','CHỈ TIÊU','GIÁ TRỊ','GHI CHÚ'],
+      ['E1','Giao dịch cần chứng từ',d.eligibleCount,''],['E2','Đã khớp chứng từ',d.matched,''],['E3','Chưa lập chứng từ',d.missing,'Cần xử lý trước khi khóa sổ'],['E4','Lệch dữ liệu chứng từ',d.mismatch,'Kiểm tra số tiền/tài khoản/Thu-Chi'],['E5','Giao dịch chưa phân loại',d.unclassifiedCount,'Tổng phát sinh '+Math.round(d.unclassifiedMonthAmount).toLocaleString('vi-VN')+'đ'],['E6','Trạng thái khóa sổ',d.locked?'ĐÃ KHÓA':'ĐANG MỞ','Kỳ '+month]
+    ];
+    const ws4=XLSX.utils.aoa_to_sheet(reconcile); setSheetWidthsV326(ws4,[10,32,18,52]); ws4['!merges']=[XLSX.utils.decode_range('A1:D1')]; appendSheetSafeV326(wb,ws4,'Đối chiếu');
+
+    const filename='So_Nha_Nong_Bang_Can_Doi_'+currentBranchIdV3+'_'+month+'.xlsx';
+    saveWorkbookV326(wb,filename);
+  }catch(e){
+    console.error('Xuất Excel cân đối lỗi:',e);
+    alert('Không xuất được file Excel: '+(e&&e.message?e.message:e));
+  }
+}
+function exportAccountingJournalXlsxV326(){
+  if(!requireV3('accounting'))return;
+  if(!ensureXlsxV326())return;
+  try{
+    const month=document.getElementById('accountingMonthV321')?.value||monthKeyV22();
+    const accountFilter=document.getElementById('accountingAccountFilterV321')?.value||'all';
+    const rows=buildAccountingRowsV321().filter(r=>accountingMonthKeyV321(r.date)===month&&(accountFilter==='all'||r.account===accountFilter));
+    const docs=accountingDocMapV322(),branch=branchNameV3(currentBranchIdV3);
+    const out=[['SỔ NHÀ NÔNG - NHẬT KÝ KẾ TOÁN'],['Cơ sở',branch],['Kỳ',month],[],['Ngày','Số chứng từ','Loại','Nguồn','Mã nguồn','Tài khoản','Nội dung','Thu (VNĐ)','Chi (VNĐ)','Trạng thái chứng từ','Ghi chú']];
+    rows.slice().reverse().forEach(r=>{const d=docs.get(r.id);out.push([r.date.toLocaleDateString('vi-VN'),d?.docNo||'',r.entryKind==='opening'?'Số dư đầu kỳ':(r.direction==='in'?'Thu':'Chi'),sourceNameV321(r.source),r.sourceDocNo||r.refId,paymentMethodNameV321(r.account),r.description,r.direction==='in'?r.amount:'',r.direction==='out'?r.amount:'',d?documentStatusNameV322(d.status):'Chưa lập',r.note||'']);});
+    const ws=XLSX.utils.aoa_to_sheet(out); setSheetWidthsV326(ws,[12,24,14,18,24,18,44,16,16,22,34]); setMoneyFormatV326(ws,[7,8]); ws['!merges']=[XLSX.utils.decode_range('A1:K1')];
+    const wb=XLSX.utils.book_new(); wb.Props={Title:'Sổ Nhà Nông - Nhật ký kế toán',Author:'Sổ Nhà Nông',CreatedDate:new Date()}; appendSheetSafeV326(wb,ws,'Nhật ký');
+    saveWorkbookV326(wb,'So_Nha_Nong_Nhat_Ky_Ke_Toan_'+currentBranchIdV3+'_'+month+'.xlsx');
+  }catch(e){
+    console.error('Xuất Excel nhật ký lỗi:',e);
+    alert('Không xuất được file Excel: '+(e&&e.message?e.message:e));
+  }
+}
+
 function exportAccountingBalanceCsvV323(){
   if(!requireV3('accounting'))return;
   const month=document.getElementById('accountingMonthV321')?.value||monthKeyV22(),d=accountingBalanceDataV323(month),now=new Date(),branch=branchNameV3(currentBranchIdV3);
@@ -3309,7 +3429,7 @@ function exportAccountingJournalCsvV323(){
   rows.slice().reverse().forEach(r=>{const d=docs.get(r.id);out.push([r.date.toLocaleDateString('vi-VN'),d?.docNo||'',r.entryKind==='opening'?'Số dư đầu kỳ':(r.direction==='in'?'Thu':'Chi'),sourceNameV321(r.source),r.sourceDocNo||r.refId,paymentMethodNameV321(r.account),r.description,r.direction==='in'?r.amount:'',r.direction==='out'?r.amount:'',d?documentStatusNameV322(d.status):'Chưa lập',r.note||'']);});
   downloadAccountingCsvV323('So_Nha_Nong_Nhat_Ky_Ke_Toan_'+currentBranchIdV3+'_'+month+'.csv',out);
 }
-function exportAccountingCsvV321(){exportAccountingJournalCsvV323();}
+function exportAccountingCsvV321(){exportAccountingJournalXlsxV326();}
 
 function canV3(key){return !!(ROLE_PERMS_V3[currentUserRoleV3]||{})[key];}
 function requireV3(key){if(canV3(key))return true;alert('Tài khoản "'+roleNameV3(currentUserRoleV3)+'" không có quyền thực hiện thao tác này.');return false;}
