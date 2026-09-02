@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Sổ Nhà Nông V3.2.7</title>
+<title>Sổ Nhà Nông V3.3.1</title>
 <link rel="shortcut icon" href="favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
@@ -430,7 +430,7 @@ input:focus,select:focus,textarea:focus{
 <div id="app">
   <div class="topbar">
     <div>
-      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V3.2.7</span></div>
+      <div class="brand">🌾 Sổ Nhà Nông <span style="font-family:'Be Vietnam Pro',sans-serif;font-size:10px;color:var(--cream-500);font-weight:600;">V3.3.1</span></div>
       <div class="sub" id="storeGreeting">Xin chào</div>
       <div class="branch-toolbar" id="branchToolbar" style="display:none;">
         <select id="branchSwitcher" onchange="switchBranchV3(this.value)"></select>
@@ -546,7 +546,7 @@ input:focus,select:focus,textarea:focus{
   <div class="screen" id="screen-ke-toan">
     <div class="section-title" style="margin-top:0;">📒 Kế toán & Chứng từ</div>
     <div class="card-tight card" style="font-size:12px;line-height:1.55;margin-bottom:12px;">
-      Số liệu của <b id="accountingBranchNameV321">cơ sở hiện tại</b>. V3.2.7 bổ sung <b>hóa đơn đầu vào NCC, file PDF/XML/ảnh, liên kết phiếu nhập và đối chiếu chênh lệch</b>. Giao dịch chưa có hình thức thanh toán vẫn nằm ở <b>Chưa phân loại</b> để không tự suy đoán sai.
+      Số liệu của <b id="accountingBranchNameV321">cơ sở hiện tại</b>. V3.3.1 bổ sung <b>Trung tâm kiểm soát cuối ngày</b> để đối chiếu Tiền – Kho – Công nợ – Chứng từ – Hóa đơn theo từng cơ sở. Giao dịch chưa có hình thức thanh toán vẫn nằm ở <b>Chưa phân loại</b> để không tự suy đoán sai.
     </div>
     <div class="stat-row" style="margin-bottom:10px;">
       <div class="stat leaf"><div class="label">💵 Tiền mặt</div><div class="value mono" id="accCashBalanceV321">0đ</div></div>
@@ -564,6 +564,7 @@ input:focus,select:focus,textarea:focus{
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
       <button class="btn btn-primary" style="flex:1;min-width:150px;" onclick="openAccountingEntryV321()">+ Thu / Chi / Số dư đầu kỳ</button>
       <button class="btn btn-ghost" style="flex:1;min-width:155px;" onclick="syncAccountingDocumentsV322()">🔄 Lập chứng từ từ giao dịch</button>
+      <button class="btn btn-leaf" style="flex:1;min-width:165px;" onclick="openEndOfDayControlV331()">🛡️ Kiểm soát cuối ngày</button>
       <button class="btn btn-ghost" id="accountingLockBtnV322" style="flex:1;min-width:135px;" onclick="toggleAccountingPeriodV322()">🔒 Khóa sổ tháng</button>
       <button class="btn btn-ghost" style="flex:1;min-width:155px;" onclick="exportAccountingBalanceXlsxV326()">📊 Xuất Excel cân đối</button>
       <button class="btn btn-ghost" style="flex:1;min-width:150px;" onclick="exportAccountingJournalXlsxV326()">📄 Xuất Excel nhật ký</button>
@@ -585,6 +586,9 @@ input:focus,select:focus,textarea:focus{
       <div class="stat leaf"><div class="label">LN trước thuế</div><div class="value mono" id="accPretaxProfitV321">0đ</div></div>
     </div>
     <div class="card-tight card" id="accountingPnlV321" style="font-size:12px;line-height:1.7;margin-bottom:14px;"></div>
+
+    <div class="section-title">🛡️ Kiểm soát vận hành</div>
+    <div class="card-tight card" id="endOfDaySummaryV331" style="font-size:12px;line-height:1.65;margin-bottom:14px;"><div class="empty-state">Chưa có phiên kiểm soát cuối ngày.</div></div>
 
     <div class="section-title">🔎 Đối chiếu chứng từ</div>
     <div class="card-tight card" id="accountingReconcileV322" style="font-size:12px;line-height:1.65;margin-bottom:14px;"><div class="empty-state">Đang kiểm tra...</div></div>
@@ -1425,6 +1429,42 @@ input:focus,select:focus,textarea:focus{
   </div>
 </div>
 
+<!-- ============ V3.3.1: TRUNG TÂM KIỂM SOÁT CUỐI NGÀY ============ -->
+<div class="overlay" id="endOfDayControlModalV331">
+  <div class="sheet" style="max-height:94vh;overflow-y:auto;">
+    <button class="sheet-close" onclick="closeModal('endOfDayControlModalV331')">✕</button>
+    <h3 style="margin:0 0 4px;">🛡️ Kiểm soát cuối ngày</h3>
+    <div class="prod-meta" style="margin-bottom:12px;">Đối chiếu Tiền – Kho – Công nợ – Chứng từ – Hóa đơn của <b id="eodBranchNameV331">cơ sở hiện tại</b>.</div>
+    <div class="card-tight card" style="margin-bottom:10px;">
+      <label>Ngày kiểm soát</label>
+      <input id="eodDateV331" type="date" onchange="renderEndOfDayControlV331()">
+    </div>
+    <div id="eodOverallV331" class="card-tight card" style="font-size:13px;line-height:1.6;margin-bottom:10px;"></div>
+
+    <div class="section-title">💰 1. Tiền</div>
+    <div class="card-tight card" style="margin-bottom:10px;">
+      <div class="row">
+        <div><label>Tiền mặt theo sổ</label><input id="eodSystemCashV331" readonly></div>
+        <div><label>Tiền mặt thực đếm *</label><input id="eodActualCashV331" type="number" min="0" inputmode="numeric" placeholder="Nhập số thực tế" oninput="renderEndOfDayControlV331(true)"></div>
+      </div>
+      <div id="eodCashDiffV331" class="prod-meta" style="margin-bottom:8px;"></div>
+      <div class="row">
+        <div><label>Ngân hàng theo sổ</label><input id="eodSystemBankV331" readonly></div>
+        <div><label>Ngân hàng thực tế *</label><input id="eodActualBankV331" type="number" min="0" inputmode="numeric" placeholder="Theo app ngân hàng" oninput="renderEndOfDayControlV331(true)"></div>
+      </div>
+      <div id="eodBankDiffV331" class="prod-meta"></div>
+    </div>
+
+    <div class="section-title">🔎 2–5. Kiểm tra tự động</div>
+    <div id="eodChecksV331" class="card" style="max-height:360px;overflow-y:auto;margin-bottom:10px;"></div>
+
+    <label>Ghi chú kiểm soát</label>
+    <textarea id="eodNoteV331" rows="3" placeholder="VD: Chênh tiền do khoản chuyển khoản cuối ngày chưa hạch toán..."></textarea>
+    <button class="btn btn-primary" id="eodSaveBtnV331" onclick="saveEndOfDayControlV331()" style="margin-top:12px;">✅ Lưu kết quả kiểm soát</button>
+    <div class="prod-meta" style="margin-top:8px;">Có thể lưu cả khi còn cảnh báo để giữ dấu vết. Nên xử lý hết cảnh báo trước khi khóa sổ tháng.</div>
+  </div>
+</div>
+
 <!-- ============ V3.2.7: HÓA ĐƠN ĐẦU VÀO NCC ============ -->
 <div class="overlay" id="purchaseInvoiceModalV327">
   <div class="sheet" style="max-height:92vh;overflow-y:auto;">
@@ -1541,6 +1581,7 @@ let purchaseInvoicesV327 = [];
 let purchaseInvoiceAuditLogsV327 = [];
 let currentPurchaseInvoiceV327 = null;
 let pendingPurchaseInvoiceContextV327 = null;
+let endOfDayControlsV331 = [];
 let storeListenersStarted = false;
 let authInitToken = 0;
 
@@ -1740,7 +1781,7 @@ function showForgotPassword(){
 async function startStoreListenersV21(){
   if(!storeRef)return;
   stopListenersV3();
-  accountingSalesV321=[];accountingDebtPaymentsV321=[];accountingPurchaseReceiptsV321=[];accountingExpensesV321=[];accountingManualV321=[];accountingDocumentsV322=[];accountingAuditLogsV322=[];accountingPeriodsV322=[];
+  accountingSalesV321=[];accountingDebtPaymentsV321=[];accountingPurchaseReceiptsV321=[];accountingExpensesV321=[];accountingManualV321=[];accountingDocumentsV322=[];accountingAuditLogsV322=[];accountingPeriodsV322=[];purchaseInvoicesV327=[];purchaseInvoiceAuditLogsV327=[];endOfDayControlsV331=[];
   storeListenersStarted=true;
   await loadBranchesV3();
   if(currentUserRoleV3!=='owner' && assignedBranchIdV3) currentBranchIdV3=assignedBranchIdV3;
@@ -1757,6 +1798,7 @@ async function startStoreListenersV21(){
   listenProfitSettingsV22();
   listenDebtLedgersV3();
   listenAccountingV321();
+  listenEndOfDayControlsV331();
   listenStockTransferPendingV311();
   applyRoleUiV3();
 }
@@ -3217,7 +3259,7 @@ function voucherPrefixV322(row){return row.entryKind==='opening'?'SD':(row.direc
 function stableTailV322(v){const x=String(v||'').replace(/[^a-zA-Z0-9]/g,'').toUpperCase();return (x.slice(-6)||'000001').padStart(6,'0');}
 function voucherNoForRowV322(row){const iso=accountingIsoDateV322(row.date).replace(/-/g,'');return voucherPrefixV322(row)+'-'+iso+'-'+stableTailV322(row.refId||row.id);}
 function documentStatusNameV322(v){return v==='cancelled'?'Đã hủy':'Đã ghi sổ';}
-function auditActionNameV322(v){return ({create:'Lập chứng từ',sync:'Đồng bộ từ giao dịch',cancel:'Hủy chứng từ',lock:'Khóa sổ',unlock:'Mở khóa sổ'})[v]||v;}
+function auditActionNameV322(v){return ({create:'Lập chứng từ',sync:'Đồng bộ từ giao dịch',cancel:'Hủy chứng từ',lock:'Khóa sổ',unlock:'Mở khóa sổ',end_of_day_check:'Kiểm soát cuối ngày'})[v]||v;}
 function accountingDocMapV322(){return new Map(accountingDocumentsV322.map(x=>[x.sourceKey,x]));}
 function tsDateV322(x){if(x&&x.toDate)return x.toDate();return null;}
 function sourceReferenceLabelV322(row){return row.sourceDocNo?row.sourceDocNo:(sourceNameV321(row.source)+' · '+stableTailV322(row.refId));}
@@ -3241,7 +3283,7 @@ function renderAccountingV321(){
   const pnl=document.getElementById('accountingPnlV321');if(pnl)pnl.innerHTML=`<b>Kết quả kinh doanh ${escapeHtmlV211(month)}</b><br>Doanh thu: <b>${money(rev)}</b> · Giá vốn: <b>${money(rev-gross)}</b><br>Lãi gộp: <b>${money(gross)}</b> · Chi phí hoạt động: <b>${money(op)}</b><br>Lợi nhuận trước thuế: <b style="color:${pretax>=0?'var(--leaf-500)':'var(--rust-500)'}">${money(pretax)}</b>`;
   const docs=accountingDocMapV322();
   root.innerHTML=monthRows.length?monthRows.map(r=>{const d=docs.get(r.id);return `<div class="prod-item" style="align-items:flex-start;"><div class="prod-ic">${paymentMethodIconV321(r.account)}</div><div style="flex:1;min-width:0;"><div class="prod-name">${escapeHtmlV211(r.description)}</div><div class="prod-meta">${r.date.toLocaleDateString('vi-VN')} · ${sourceNameV321(r.source)} · ${paymentMethodNameV321(r.account)}${r.entryKind==='opening'?' · Số dư đầu kỳ':''}</div><div class="prod-meta">${d?`🧾 ${escapeHtmlV211(d.docNo||'Đã có chứng từ')}`:'⚠️ Chưa lập chứng từ'}${r.note?' · 📝 '+escapeHtmlV211(r.note):''}</div></div><div style="text-align:right;"><div class="mono" style="font-weight:700;color:${r.direction==='in'?'var(--leaf-500)':'var(--rust-500)'};">${r.direction==='in'?'+':'−'}${money(r.amount)}</div>${r.manualId?`<button class="btn btn-sm btn-ghost" style="width:auto;margin-top:5px;" onclick="cancelAccountingEntryV322('${r.manualId}')">Hủy</button>`:''}</div></div>`;}).join(''):'<div class="empty-state">Chưa có giao dịch trong tháng/bộ lọc này.</div>';
-  renderAccountingReconciliationV322();renderAccountingDocumentsV322();renderAccountingLockButtonV322();renderPurchaseInvoicesV327();
+  renderAccountingReconciliationV322();renderAccountingDocumentsV322();renderAccountingLockButtonV322();renderPurchaseInvoicesV327();renderEndOfDaySummaryV331();
 }
 function renderAccountingLockButtonV322(){const btn=document.getElementById('accountingLockBtnV322');if(!btn)return;const month=document.getElementById('accountingMonthV321')?.value||monthKeyV22(),locked=isAccountingPeriodLockedV322(month);btn.textContent=locked?'🔓 Mở khóa sổ '+month:'🔒 Khóa sổ '+month;btn.style.display=currentUserRoleV3==='owner'?'block':'none';}
 function renderAccountingReconciliationV322(){
@@ -3321,6 +3363,68 @@ function accountingBalanceDataV323(month){
   let matched=0,missing=0,mismatch=0;
   eligible.forEach(r=>{const d=docs.get(r.id);if(!d){missing++;return;}const ok=Number(d.amount||0)===Number(r.amount||0)&&d.account===r.account&&d.direction===r.direction&&d.status!=='cancelled';ok?matched++:mismatch++;});
   return {balance,receivable,payable,inventory,totalAssets,netWorth,totalSources,totalIn,totalOut,netCashflow:totalIn-totalOut,revenue,cogs,gross,operatingExpense,pretax,eligibleCount:eligible.length,matched,missing,mismatch,unclassifiedCount:unclassifiedRows.length,unclassifiedMonthAmount:unclassifiedRows.reduce((a,r)=>a+r.amount,0),locked:isAccountingPeriodLockedV322(month)};
+}
+
+// ---------- V3.3.1: TRUNG TÂM KIỂM SOÁT CUỐI NGÀY ----------
+function listenEndOfDayControlsV331(){
+  if(!canV3('accounting'))return;
+  subV3(storeRef.collection('endOfDayControls').where('branchId','==',currentBranchIdV3),snap=>{
+    endOfDayControlsV331=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderEndOfDaySummaryV331();
+    const modal=document.getElementById('endOfDayControlModalV331');if(modal?.classList.contains('show'))renderEndOfDayControlV331();
+  },e=>console.warn('Kiểm soát cuối ngày:',e));
+}
+function eodDateStrV331(x){const d=accountingDateV321(x);return d?accountingIsoDateV322(d):'';}
+function eodControlIdV331(dateStr,branchId=currentBranchIdV3){return branchId+'__'+dateStr;}
+function eodSavedV331(dateStr){return endOfDayControlsV331.find(x=>x.branchId===currentBranchIdV3&&x.controlDate===dateStr);}
+function eodMoneyInputV331(id){const el=document.getElementById(id);if(!el||el.value==='')return null;const n=Number(el.value);return Number.isFinite(n)?n:null;}
+function eodStatusLabelV331(status){return status==='matched'?'✅ Đã khớp':status==='warning'?'⚠️ Có cảnh báo':'🕒 Chưa hoàn tất';}
+function dailyControlDataV331(dateStr){
+  const rows=buildAccountingRowsV321(),through=rows.filter(r=>accountingIsoDateV322(r.date)<=dateStr),dayRows=rows.filter(r=>accountingIsoDateV322(r.date)===dateStr);
+  const cash=through.filter(r=>r.account==='cash').reduce((a,r)=>a+(r.direction==='in'?r.amount:-r.amount),0),bank=through.filter(r=>r.account==='bank').reduce((a,r)=>a+(r.direction==='in'?r.amount:-r.amount),0);
+  const dayIn=dayRows.filter(r=>r.entryKind!=='opening'&&r.direction==='in').reduce((a,r)=>a+r.amount,0),dayOut=dayRows.filter(r=>r.entryKind!=='opening'&&r.direction==='out').reduce((a,r)=>a+r.amount,0);
+  const docMap=accountingDocMapV322(),eligible=dayRows.filter(r=>r.account!=='unclassified'),unclassified=dayRows.filter(r=>r.account==='unclassified');let docMatched=0,docMissing=0,docMismatch=0;
+  eligible.forEach(r=>{const d=docMap.get(r.id);if(!d){docMissing++;return;}const ok=Number(d.amount||0)===Number(r.amount||0)&&d.account===r.account&&d.direction===r.direction&&d.status!=='cancelled';ok?docMatched++:docMismatch++;});
+  const stockIssues=[],negativeStock=products.filter(p=>Number(p.stock||0)<-0.001),outStock=products.filter(isOutOfStock),lowStock=products.filter(p=>!isOutOfStock(p)&&isLowStock(p));
+  products.forEach(p=>{const lotTotal=lotsForProduct(p.id).reduce((a,l)=>a+Number(l.qtyRemaining||0),0);if(!healthClose(Number(p.stock||0),lotTotal))stockIssues.push({id:p.id,name:p.name,stock:Number(p.stock||0),lots:lotTotal});});
+  const receivable=customers.reduce((a,x)=>a+Number(x.debt||0),0),payable=suppliers.reduce((a,x)=>a+Number(x.debt||0),0),negativeCustomer=customers.filter(x=>Number(x.debt||0)<-0.001),negativeSupplier=suppliers.filter(x=>Number(x.debt||0)<-0.001);
+  const receipts=accountingPurchaseReceiptsV321.filter(x=>eodDateStrV331(x)===dateStr),activeInv=purchaseInvoicesV327.filter(x=>x.status!=='cancelled'&&x.invoiceDate===dateStr),missingInvoices=receipts.filter(r=>!r.invoiceId),invoiceMismatch=activeInv.filter(x=>invoiceReconcileV327(x).status==='mismatch'),invoiceUnlinked=activeInv.filter(x=>invoiceReconcileV327(x).status==='unlinked');
+  const inventoryValue=products.reduce((a,x)=>a+Number(x.stock||0)*Number(x.avgCost??x.cost??0),0);
+  const critical=stockIssues.length+negativeStock.length+negativeCustomer.length+negativeSupplier.length+docMissing+docMismatch+unclassified.length+missingInvoices.length+invoiceMismatch.length+invoiceUnlinked.length;
+  return {dateStr,cash,bank,dayIn,dayOut,dayRows,eligible,unclassified,docMatched,docMissing,docMismatch,stockIssues,negativeStock,outStock,lowStock,receivable,payable,negativeCustomer,negativeSupplier,receipts,activeInv,missingInvoices,invoiceMismatch,invoiceUnlinked,inventoryValue,critical};
+}
+function renderEndOfDaySummaryV331(){
+  const box=document.getElementById('endOfDaySummaryV331');if(!box)return;const today=new Date().toISOString().slice(0,10),todaySaved=eodSavedV331(today),latest=endOfDayControlsV331.slice().sort((a,b)=>String(b.controlDate||'').localeCompare(String(a.controlDate||'')))[0];
+  if(!todaySaved){box.innerHTML=`Hôm nay <b>${today.split('-').reverse().join('/')}</b>: <span class="badge badge-exp">🕒 Chưa kiểm soát</span><br><span class="prod-meta">Cuối ngày, bấm <b>“🛡️ Kiểm soát cuối ngày”</b> để đối chiếu tiền, kho, công nợ, chứng từ và hóa đơn.${latest?` Lần gần nhất: ${escapeHtmlV211((latest.controlDate||'').split('-').reverse().join('/'))} · ${eodStatusLabelV331(latest.status)}`:''}</span>`;return;}
+  const diff=Math.abs(Number(todaySaved.cashDiff||0))+Math.abs(Number(todaySaved.bankDiff||0)),warn=Number(todaySaved.issueCount||0),status=todaySaved.status||((diff<=1&&warn===0)?'matched':'warning');
+  box.innerHTML=`Hôm nay <b>${today.split('-').reverse().join('/')}</b> · <span class="badge ${status==='matched'?'badge-low':'badge-expired'}">${eodStatusLabelV331(status)}</span><br>Chênh tiền: <b>${money(diff)}</b> · Cảnh báo nghiệp vụ: <b>${warn}</b>${todaySaved.note?`<br><span class="prod-meta">📝 ${escapeHtmlV211(todaySaved.note)}</span>`:''}`;
+}
+function openEndOfDayControlV331(){
+  if(!requireV3('accounting'))return;const d=document.getElementById('eodDateV331');if(d)d.value=new Date().toISOString().slice(0,10);const bn=document.getElementById('eodBranchNameV331');if(bn)bn.textContent=branchNameV3(currentBranchIdV3);openModal('endOfDayControlModalV331');renderEndOfDayControlV331();
+}
+function renderEndOfDayControlV331(preserveInputs=false){
+  const dateEl=document.getElementById('eodDateV331');if(!dateEl)return;const dateStr=dateEl.value||new Date().toISOString().slice(0,10),d=dailyControlDataV331(dateStr),saved=eodSavedV331(dateStr),cashEl=document.getElementById('eodActualCashV331'),bankEl=document.getElementById('eodActualBankV331'),noteEl=document.getElementById('eodNoteV331');
+  document.getElementById('eodSystemCashV331').value=Math.round(d.cash).toLocaleString('vi-VN')+' đ';document.getElementById('eodSystemBankV331').value=Math.round(d.bank).toLocaleString('vi-VN')+' đ';
+  if(!preserveInputs){cashEl.value=saved&&saved.actualCash!=null?Number(saved.actualCash):'';bankEl.value=saved&&saved.actualBank!=null?Number(saved.actualBank):'';noteEl.value=saved?.note||'';}
+  const actualCash=eodMoneyInputV331('eodActualCashV331'),actualBank=eodMoneyInputV331('eodActualBankV331'),cashDiff=actualCash===null?null:actualCash-d.cash,bankDiff=actualBank===null?null:actualBank-d.bank;
+  const fmtDiff=x=>x===null?'Chưa nhập số thực tế':(Math.abs(x)<=1?'✅ Khớp sổ':`⚠️ Chênh ${x>0?'+':''}${money(x)}`);
+  const cashDiffEl=document.getElementById('eodCashDiffV331'),bankDiffEl=document.getElementById('eodBankDiffV331');cashDiffEl.innerHTML='Đối chiếu: <b>'+fmtDiff(cashDiff)+'</b>';bankDiffEl.innerHTML='Đối chiếu: <b>'+fmtDiff(bankDiff)+'</b>';
+  const moneyReady=actualCash!==null&&actualBank!==null,moneyMismatch=moneyReady&&(Math.abs(cashDiff)>1||Math.abs(bankDiff)>1),issueCount=d.critical+(moneyMismatch?1:0),status=!moneyReady?'pending':issueCount===0?'matched':'warning';
+  document.getElementById('eodOverallV331').innerHTML=`<b>${eodStatusLabelV331(status)}</b> · ${escapeHtmlV211(branchNameV3(currentBranchIdV3))} · ${escapeHtmlV211(dateStr.split('-').reverse().join('/'))}<br>Thu trong ngày: <b>${money(d.dayIn)}</b> · Chi trong ngày: <b>${money(d.dayOut)}</b>${saved?`<br><span class="prod-meta">Đã lưu trước đó: ${eodStatusLabelV331(saved.status)}${saved.savedAt?.toDate?' · '+saved.savedAt.toDate().toLocaleString('vi-VN'):''}</span>`:''}`;
+  const line=(icon,title,ok,detail)=>`<div class="prod-item" style="align-items:flex-start;"><div class="prod-ic">${icon}</div><div style="flex:1;"><div class="prod-name">${title} · ${ok?'✅':'⚠️'}</div><div class="prod-meta">${detail}</div></div></div>`;
+  const stockOk=d.stockIssues.length===0&&d.negativeStock.length===0, debtOk=d.negativeCustomer.length===0&&d.negativeSupplier.length===0,docOk=d.docMissing===0&&d.docMismatch===0&&d.unclassified.length===0,invOk=d.invoiceMismatch.length===0&&d.invoiceUnlinked.length===0;
+  const checks=[];
+  checks.push(line('📦','Kho',stockOk,`Giá trị tồn ${money(d.inventoryValue)} · Hết hàng ${d.outStock.length} · Sắp hết ${d.lowStock.length} · Lệch tồn/lô ${d.stockIssues.length} · Tồn âm ${d.negativeStock.length}`));
+  checks.push(line('👨‍🌾','Công nợ',debtOk,`Phải thu KH ${money(d.receivable)} · Phải trả NCC ${money(d.payable)} · Công nợ âm bất thường ${d.negativeCustomer.length+d.negativeSupplier.length}`));
+  checks.push(line('🧾','Chứng từ',docOk,`Giao dịch ngày ${d.dayRows.length} · Khớp ${d.docMatched}/${d.eligible.length} · Chưa lập ${d.docMissing} · Lệch ${d.docMismatch} · Chưa phân loại ${d.unclassified.length}`));
+  checks.push(line('📎','Hóa đơn đầu vào',invOk,`Phiếu nhập ngày ${d.receipts.length} · HĐ đầu vào ngày ${d.activeInv.length} · Phiếu nhập chưa có HĐ ${d.missingInvoices.length} · HĐ lệch ${d.invoiceMismatch.length} · HĐ chưa liên kết ${d.invoiceUnlinked.length}`));
+  if(d.stockIssues.length)checks.push(`<div class="card-tight card v3-danger" style="margin:8px 0;"><b>Chi tiết lệch tồn/lô:</b><br>${d.stockIssues.slice(0,8).map(x=>'• '+escapeHtmlV211(x.name)+' · tồn '+x.stock.toLocaleString('vi-VN')+' / lô '+x.lots.toLocaleString('vi-VN')).join('<br>')}${d.stockIssues.length>8?'<br>…':''}</div>`);
+  document.getElementById('eodChecksV331').innerHTML=checks.join('');
+  const btn=document.getElementById('eodSaveBtnV331');if(btn){btn.textContent=saved?'✅ Cập nhật kết quả kiểm soát':'✅ Lưu kết quả kiểm soát';btn.disabled=!moneyReady;}
+}
+async function saveEndOfDayControlV331(){
+  if(!requireV3('accounting'))return;const dateStr=document.getElementById('eodDateV331')?.value;if(!dateStr)return;const actualCash=eodMoneyInputV331('eodActualCashV331'),actualBank=eodMoneyInputV331('eodActualBankV331');if(actualCash===null||actualBank===null){alert('Cần nhập tiền mặt thực đếm và số dư ngân hàng thực tế.');return;}const d=dailyControlDataV331(dateStr),cashDiff=actualCash-d.cash,bankDiff=actualBank-d.bank,moneyMismatch=Math.abs(cashDiff)>1||Math.abs(bankDiff)>1,issueCount=d.critical+(moneyMismatch?1:0),status=issueCount===0?'matched':'warning',note=(document.getElementById('eodNoteV331')?.value||'').trim(),btn=document.getElementById('eodSaveBtnV331');
+  btn.disabled=true;btn.textContent='Đang lưu...';try{const ref=storeRef.collection('endOfDayControls').doc(eodControlIdV331(dateStr)),payload={branchId:currentBranchIdV3,controlDate:dateStr,status,systemCash:Number(d.cash||0),actualCash,cashDiff:Number(cashDiff||0),systemBank:Number(d.bank||0),actualBank,bankDiff:Number(bankDiff||0),dayIn:Number(d.dayIn||0),dayOut:Number(d.dayOut||0),inventoryValue:Number(d.inventoryValue||0),receivable:Number(d.receivable||0),payable:Number(d.payable||0),stockIssueCount:d.stockIssues.length,negativeStockCount:d.negativeStock.length,documentMissingCount:d.docMissing,documentMismatchCount:d.docMismatch,unclassifiedCount:d.unclassified.length,invoiceMissingCount:d.missingInvoices.length,invoiceMismatchCount:d.invoiceMismatch.length,invoiceUnlinkedCount:d.invoiceUnlinked.length,issueCount,note,savedByUid:auth.currentUser?.uid||'',savedAt:firebase.firestore.FieldValue.serverTimestamp()};await ref.set(payload,{merge:true});await storeRef.collection('accountingAuditLogs').add({branchId:currentBranchIdV3,documentId:'EOD_'+dateStr,docNo:'KS-'+dateStr.replace(/-/g,''),action:'end_of_day_check',note:`${status==='matched'?'Đã khớp':'Có cảnh báo'} · chênh tiền ${money(Math.abs(cashDiff)+Math.abs(bankDiff))} · ${issueCount} cảnh báo`,createdByUid:auth.currentUser?.uid||'',createdAt:firebase.firestore.FieldValue.serverTimestamp()});alert(status==='matched'?'✅ Đã lưu kiểm soát cuối ngày. Số liệu đang khớp.':'⚠️ Đã lưu kiểm soát cuối ngày. Còn '+issueCount+' cảnh báo cần xem lại.');}catch(e){alert('Không lưu được kiểm soát cuối ngày: '+e.message);}finally{btn.disabled=false;renderEndOfDayControlV331();}
 }
 
 // ---------- V3.2.7: HÓA ĐƠN ĐẦU VÀO NCC ----------
@@ -3481,6 +3585,10 @@ function exportAccountingBalanceXlsxV326(){
     const invoiceRows=[['SỔ NHÀ NÔNG - HÓA ĐƠN ĐẦU VÀO NCC'],['Cơ sở',branch],['Kỳ',month],[],['Ngày HĐ','Số HĐ','Ký hiệu','Nhà cung cấp','MST','Trước thuế','VAT','Tổng thanh toán','Thanh toán','Phiếu nhập','Đối chiếu','Số file','Trạng thái']];
     purchaseInvoicesV327.filter(x=>invoiceMonthV327(x)===month).sort((a,b)=>String(a.invoiceDate||'').localeCompare(String(b.invoiceDate||''))).forEach(x=>{const rc=invoiceReconcileV327(x);invoiceRows.push([x.invoiceDate||'',x.invoiceNo||'',x.serial||'',x.supplierName||'',x.sellerTaxCode||'',Number(x.preTaxAmount||0),Number(x.vatAmount||0),Number(x.totalAmount||0),paymentMethodNameV321(x.paymentMethod),x.receiptNo||'',rc.status==='matched'?'Khớp':rc.status==='mismatch'?rc.label:'Chưa liên kết',Number((x.files||[]).length),invoiceStatusNameV327(x.status)]);});
     const ws5=XLSX.utils.aoa_to_sheet(invoiceRows);setSheetWidthsV326(ws5,[12,16,14,28,16,16,14,18,16,18,22,10,14]);setMoneyFormatV326(ws5,[5,6,7]);ws5['!merges']=[XLSX.utils.decode_range('A1:M1')];appendSheetSafeV326(wb,ws5,'HĐ đầu vào');
+
+    const eodRows=[['SỔ NHÀ NÔNG - KIỂM SOÁT CUỐI NGÀY'],['Cơ sở',branch],['Kỳ',month],[],['Ngày','Trạng thái','TM theo sổ','TM thực tế','Chênh TM','NH theo sổ','NH thực tế','Chênh NH','Thu ngày','Chi ngày','Cảnh báo','Ghi chú']];
+    endOfDayControlsV331.filter(x=>String(x.controlDate||'').startsWith(month)).sort((a,b)=>String(a.controlDate||'').localeCompare(String(b.controlDate||''))).forEach(x=>eodRows.push([x.controlDate||'',x.status==='matched'?'Đã khớp':'Có cảnh báo',Number(x.systemCash||0),Number(x.actualCash||0),Number(x.cashDiff||0),Number(x.systemBank||0),Number(x.actualBank||0),Number(x.bankDiff||0),Number(x.dayIn||0),Number(x.dayOut||0),Number(x.issueCount||0),x.note||'']));
+    const ws6=XLSX.utils.aoa_to_sheet(eodRows);setSheetWidthsV326(ws6,[12,16,16,16,16,16,16,16,16,16,12,42]);setMoneyFormatV326(ws6,[2,3,4,5,6,7,8,9]);ws6['!merges']=[XLSX.utils.decode_range('A1:L1')];appendSheetSafeV326(wb,ws6,'Kiểm soát ngày');
 
     const filename='So_Nha_Nong_Bang_Can_Doi_'+currentBranchIdV3+'_'+month+'.xlsx';
     saveWorkbookV326(wb,filename);
